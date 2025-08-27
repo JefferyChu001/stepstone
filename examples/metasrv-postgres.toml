@@ -1,0 +1,9 @@
+# Example Metasrv configuration with PostgreSQL store
+
+[store]
+store_type = "postgres_store"
+store_addrs = ["postgresql://greptime:password@localhost:5432/greptime"]
+meta_table_name = "greptime_metasrv"
+
+[server]
+addr = "0.0.0.0:3002"

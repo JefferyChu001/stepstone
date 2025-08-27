@@ -1,0 +1,865 @@
+2025-08-27T10:00:08.034059Z  INFO cmd: GreptimeDB version: 
+branch: 
+commit: 83f566ad20484549b7f550b79c0c71f1875ba663
+clean: true
+version: 0.16.0
+2025-08-27T10:00:08.034063Z  INFO cmd: command line arguments
+2025-08-27T10:00:08.034065Z  INFO cmd: argument: ./greptime
+2025-08-27T10:00:08.034066Z  INFO cmd: argument: datanode
+2025-08-27T10:00:08.034067Z  INFO cmd: argument: start
+2025-08-27T10:00:08.034069Z  INFO cmd: argument: --config-file
+2025-08-27T10:00:08.034070Z  INFO cmd: argument: examples/datanode-file.toml
+2025-08-27T10:00:08.034402Z  WARN cmd: Failed to activate heap profile err=0: Internal error
+1: Memory profiling is not enabled
+2025-08-27T10:00:08.034444Z  INFO servers::grpc: Using detected: 10.152.100.81:3001 as server address
+2025-08-27T10:00:08.034744Z  INFO cmd::datanode::builder: Initialized Datanode instance with GreptimeOptions {
+    runtime: RuntimeOptions {
+        global_rt_size: 10,
+        compact_rt_size: 5,
+    },
+    plugins: [],
+    component: DatanodeOptions {
+        node_id: Some(
+            1,
+        ),
+        workload_types: [
+            Hybrid,
+        ],
+        require_lease_before_startup: false,
+        init_regions_in_background: false,
+        init_regions_parallelism: 16,
+        grpc: GrpcOptions {
+            bind_addr: "127.0.0.1:3001",
+            server_addr: "10.152.100.81:3001",
+            max_recv_message_size: 512.0MiB,
+            max_send_message_size: 512.0MiB,
+            flight_compression: ArrowIpc,
+            runtime_size: 8,
+            tls: TlsOption {
+                mode: Disable,
+                cert_path: "",
+                key_path: "",
+                ca_cert_path: "",
+                watch: false,
+            },
+        },
+        heartbeat: HeartbeatOptions {
+            interval: 3s,
+            retry_interval: 3s,
+        },
+        http: HttpOptions {
+            addr: "127.0.0.1:4000",
+            timeout: 0ns,
+            disable_dashboard: true,
+            body_limit: 64.0MiB,
+            prom_validation_mode: Strict,
+            cors_allowed_origins: [],
+            enable_cors: true,
+        },
+        meta_client: Some(
+            MetaClientOptions {
+                metasrv_addrs: [
+                    "127.0.0.1:3002",
+                ],
+                timeout: 3s,
+                heartbeat_timeout: 500ms,
+                ddl_timeout: 10s,
+                connect_timeout: 1s,
+                tcp_nodelay: true,
+                metadata_cache_max_capacity: 100000,
+                metadata_cache_ttl: 600s,
+                metadata_cache_tti: 300s,
+            },
+        ),
+        wal: RaftEngine(
+            RaftEngineConfig {
+                dir: None,
+                file_size: 128.0MiB,
+                purge_threshold: 1.0GiB,
+                purge_interval: 60s,
+                read_batch_size: 128,
+                sync_write: false,
+                enable_log_recycle: true,
+                prefill_log_files: false,
+                sync_period: None,
+                recovery_parallelism: 10,
+            },
+        ),
+        storage: StorageConfig {
+            data_home: "./greptimedb_data",
+            store: File(
+                FileConfig,
+            ),
+            providers: [],
+        },
+        max_concurrent_queries: 0,
+        region_engine: [
+            Mito(
+                MitoConfig {
+                    num_workers: 5,
+                    worker_channel_size: 128,
+                    worker_request_batch_size: 64,
+                    manifest_checkpoint_distance: 10,
+                    compress_manifest: false,
+                    max_background_flushes: 5,
+                    max_background_compactions: 3,
+                    max_background_purges: 10,
+                    auto_flush_interval: 1800s,
+                    global_write_buffer_size: 1.0GiB,
+                    global_write_buffer_reject_size: 2.0GiB,
+                    sst_meta_cache_size: 128.0MiB,
+                    vector_cache_size: 512.0MiB,
+                    page_cache_size: 2.0GiB,
+                    selector_result_cache_size: 512.0MiB,
+                    enable_write_cache: false,
+                    write_cache_path: "",
+                    write_cache_size: 5.0GiB,
+                    write_cache_ttl: None,
+                    sst_write_buffer_size: 8.0MiB,
+                    parallel_scan_channel_size: 32,
+                    max_concurrent_scan_files: 128,
+                    allow_stale_entries: false,
+                    index: IndexConfig {
+                        aux_path: "",
+                        staging_size: 2.0GiB,
+                        staging_ttl: Some(
+                            604800s,
+                        ),
+                        write_buffer_size: 8.0MiB,
+                        metadata_cache_size: 64.0MiB,
+                        content_cache_size: 128.0MiB,
+                        content_cache_page_size: 64.0KiB,
+                        result_cache_size: 128.0MiB,
+                    },
+                    inverted_index: InvertedIndexConfig {
+                        create_on_flush: Auto,
+                        create_on_compaction: Auto,
+                        apply_on_query: Auto,
+                        mem_threshold_on_create: Auto,
+                        intermediate_path: "",
+                        write_buffer_size: 8.0MiB,
+                    },
+                    fulltext_index: FulltextIndexConfig {
+                        create_on_flush: Auto,
+                        create_on_compaction: Auto,
+                        apply_on_query: Auto,
+                        mem_threshold_on_create: Auto,
+                        compress: true,
+                    },
+                    bloom_filter_index: BloomFilterConfig {
+                        create_on_flush: Auto,
+                        create_on_compaction: Auto,
+                        apply_on_query: Auto,
+                        mem_threshold_on_create: Auto,
+                    },
+                    memtable: TimeSeries,
+                    min_compaction_interval: 0ns,
+                },
+            ),
+            File(
+                EngineConfig,
+            ),
+        ],
+        logging: LoggingOptions {
+            dir: "./greptimedb_data/logs",
+            level: None,
+            log_format: Text,
+            max_log_files: 720,
+            append_stdout: true,
+            enable_otlp_tracing: false,
+            otlp_endpoint: None,
+            tracing_sample_ratio: None,
+            otlp_export_protocol: None,
+        },
+        enable_telemetry: true,
+        export_metrics: ExportMetricsOption {
+            enable: false,
+            write_interval: 30s,
+            self_import: None,
+            remote_write: None,
+        },
+        tracing: TracingOptions,
+        query: QueryOptions {
+            parallelism: 0,
+            allow_query_fallback: false,
+        },
+        memory: MemoryOptions {
+            enable_heap_profiling: true,
+        },
+        rpc_addr: None,
+        rpc_hostname: None,
+        rpc_runtime_size: None,
+        rpc_max_recv_message_size: None,
+        rpc_max_send_message_size: None,
+    },
+}
+2025-08-27T10:00:08.034925Z  INFO meta_client: Creating Datanode { member_id: 1 } instance with Metasrv addrs ["127.0.0.1:3002"]
+2025-08-27T10:00:08.035266Z  INFO meta_client::client: MetaClient channel config: ChannelConfig { timeout: Some(3s), connect_timeout: Some(1s), concurrency_limit: None, rate_limit: None, initial_stream_window_size: None, initial_connection_window_size: None, http2_keep_alive_interval: Some(30s), http2_keep_alive_timeout: None, http2_keep_alive_while_idle: Some(true), http2_adaptive_window: None, tcp_keepalive: None, tcp_nodelay: true, client_tls: None, max_recv_message_size: 512.0MiB, max_send_message_size: 512.0MiB, send_compression: false, accept_compression: false }
+2025-08-27T10:00:08.035584Z  INFO meta_client::client: Heartbeat client started
+2025-08-27T10:00:08.035751Z  INFO meta_client::client: Store client started
+2025-08-27T10:00:08.036862Z  INFO common_grpc::channel_manager: ChannelManager: 1, channel recycle is started, running in the background!
+2025-08-27T10:00:08.043944Z  INFO cmd::datanode: Building datanode with StartCommand {
+    node_id: None,
+    rpc_bind_addr: None,
+    rpc_server_addr: None,
+    metasrv_addrs: None,
+    config_file: Some(
+        "examples/datanode-file.toml",
+    ),
+    data_home: None,
+    wal_dir: None,
+    http_addr: None,
+    http_timeout: None,
+    env_prefix: "GREPTIMEDB_DATANODE",
+}
+2025-08-27T10:00:08.075488Z  INFO object_store::factory: The file storage home is: ./greptimedb_data/
+2025-08-27T10:00:08.078523Z  INFO datanode::datanode: Creating raft-engine logstore with config: RaftEngineConfig { dir: None, file_size: 128.0MiB, purge_threshold: 1.0GiB, purge_interval: 60s, read_batch_size: 128, sync_write: false, enable_log_recycle: true, prefill_log_files: false, sync_period: None, recovery_parallelism: 10 } and storage path: ./greptimedb_data/wal
+2025-08-27T10:00:08.079978Z  INFO log: Recovering raft logs takes 941.417µs    
+2025-08-27T10:00:08.085609Z  INFO mito2::sst::index::intermediate: Initializing intermediate manager, aux_path: ./greptimedb_data/index_intermediate
+2025-08-27T10:00:08.094432Z  INFO mito2::worker: Start region worker thread 2, init_check_delay: 161s
+2025-08-27T10:00:08.094430Z  INFO mito2::worker: Start region worker thread 1, init_check_delay: 170s
+2025-08-27T10:00:08.094435Z  INFO mito2::worker: Start region worker thread 0, init_check_delay: 140s
+2025-08-27T10:00:08.094433Z  INFO mito2::worker: Start region worker thread 3, init_check_delay: 122s
+2025-08-27T10:00:08.094437Z  INFO mito2::worker: Start region worker thread 4, init_check_delay: 168s
+2025-08-27T10:00:08.095057Z  INFO datanode::region_server: Region Engine mito is registered
+2025-08-27T10:00:08.095302Z  INFO datanode::region_server: Region Engine metric is registered
+2025-08-27T10:00:08.095304Z  INFO datanode::region_server: Region Engine file is registered
+2025-08-27T10:00:08.096233Z  INFO common_grpc::channel_manager: ChannelManager: 0, channel recycle is started, running in the background!
+2025-08-27T10:00:08.102560Z  INFO datanode::datanode: going to open 0 region(s)
+2025-08-27T10:00:08.103548Z  INFO datanode::datanode: all regions are opened
+2025-08-27T10:00:08.106513Z  INFO cmd: Starting app: greptime-datanode
+2025-08-27T10:00:08.106521Z  INFO datanode::datanode: Starting datanode instance...
+2025-08-27T10:00:08.106657Z  INFO datanode::heartbeat: Starting heartbeat to Metasrv with interval 3000. My node id is 1, address is 10.152.100.81:3001.
+2025-08-27T10:00:45.099098Z  INFO cmd: GreptimeDB version: 
+branch: 
+commit: 83f566ad20484549b7f550b79c0c71f1875ba663
+clean: true
+version: 0.16.0
+2025-08-27T10:00:45.099101Z  INFO cmd: command line arguments
+2025-08-27T10:00:45.099103Z  INFO cmd: argument: ./greptime
+2025-08-27T10:00:45.099105Z  INFO cmd: argument: datanode
+2025-08-27T10:00:45.099106Z  INFO cmd: argument: start
+2025-08-27T10:00:45.099107Z  INFO cmd: argument: --config-file
+2025-08-27T10:00:45.099109Z  INFO cmd: argument: examples/datanode-file.toml
+2025-08-27T10:00:45.099486Z  WARN cmd: Failed to activate heap profile err=0: Internal error
+1: Memory profiling is not enabled
+2025-08-27T10:00:45.099540Z  INFO servers::grpc: Using detected: 10.152.100.81:3001 as server address
+2025-08-27T10:00:45.099653Z  INFO cmd::datanode::builder: Initialized Datanode instance with GreptimeOptions {
+    runtime: RuntimeOptions {
+        global_rt_size: 10,
+        compact_rt_size: 5,
+    },
+    plugins: [],
+    component: DatanodeOptions {
+        node_id: Some(
+            1,
+        ),
+        workload_types: [
+            Hybrid,
+        ],
+        require_lease_before_startup: false,
+        init_regions_in_background: false,
+        init_regions_parallelism: 16,
+        grpc: GrpcOptions {
+            bind_addr: "127.0.0.1:3001",
+            server_addr: "10.152.100.81:3001",
+            max_recv_message_size: 512.0MiB,
+            max_send_message_size: 512.0MiB,
+            flight_compression: ArrowIpc,
+            runtime_size: 8,
+            tls: TlsOption {
+                mode: Disable,
+                cert_path: "",
+                key_path: "",
+                ca_cert_path: "",
+                watch: false,
+            },
+        },
+        heartbeat: HeartbeatOptions {
+            interval: 3s,
+            retry_interval: 3s,
+        },
+        http: HttpOptions {
+            addr: "127.0.0.1:4000",
+            timeout: 0ns,
+            disable_dashboard: true,
+            body_limit: 64.0MiB,
+            prom_validation_mode: Strict,
+            cors_allowed_origins: [],
+            enable_cors: true,
+        },
+        meta_client: Some(
+            MetaClientOptions {
+                metasrv_addrs: [
+                    "127.0.0.1:3002",
+                ],
+                timeout: 3s,
+                heartbeat_timeout: 500ms,
+                ddl_timeout: 10s,
+                connect_timeout: 1s,
+                tcp_nodelay: true,
+                metadata_cache_max_capacity: 100000,
+                metadata_cache_ttl: 600s,
+                metadata_cache_tti: 300s,
+            },
+        ),
+        wal: RaftEngine(
+            RaftEngineConfig {
+                dir: None,
+                file_size: 128.0MiB,
+                purge_threshold: 1.0GiB,
+                purge_interval: 60s,
+                read_batch_size: 128,
+                sync_write: false,
+                enable_log_recycle: true,
+                prefill_log_files: false,
+                sync_period: None,
+                recovery_parallelism: 10,
+            },
+        ),
+        storage: StorageConfig {
+            data_home: "./greptimedb_data",
+            store: File(
+                FileConfig,
+            ),
+            providers: [],
+        },
+        max_concurrent_queries: 0,
+        region_engine: [
+            Mito(
+                MitoConfig {
+                    num_workers: 5,
+                    worker_channel_size: 128,
+                    worker_request_batch_size: 64,
+                    manifest_checkpoint_distance: 10,
+                    compress_manifest: false,
+                    max_background_flushes: 5,
+                    max_background_compactions: 3,
+                    max_background_purges: 10,
+                    auto_flush_interval: 1800s,
+                    global_write_buffer_size: 1.0GiB,
+                    global_write_buffer_reject_size: 2.0GiB,
+                    sst_meta_cache_size: 128.0MiB,
+                    vector_cache_size: 512.0MiB,
+                    page_cache_size: 2.0GiB,
+                    selector_result_cache_size: 512.0MiB,
+                    enable_write_cache: false,
+                    write_cache_path: "",
+                    write_cache_size: 5.0GiB,
+                    write_cache_ttl: None,
+                    sst_write_buffer_size: 8.0MiB,
+                    parallel_scan_channel_size: 32,
+                    max_concurrent_scan_files: 128,
+                    allow_stale_entries: false,
+                    index: IndexConfig {
+                        aux_path: "",
+                        staging_size: 2.0GiB,
+                        staging_ttl: Some(
+                            604800s,
+                        ),
+                        write_buffer_size: 8.0MiB,
+                        metadata_cache_size: 64.0MiB,
+                        content_cache_size: 128.0MiB,
+                        content_cache_page_size: 64.0KiB,
+                        result_cache_size: 128.0MiB,
+                    },
+                    inverted_index: InvertedIndexConfig {
+                        create_on_flush: Auto,
+                        create_on_compaction: Auto,
+                        apply_on_query: Auto,
+                        mem_threshold_on_create: Auto,
+                        intermediate_path: "",
+                        write_buffer_size: 8.0MiB,
+                    },
+                    fulltext_index: FulltextIndexConfig {
+                        create_on_flush: Auto,
+                        create_on_compaction: Auto,
+                        apply_on_query: Auto,
+                        mem_threshold_on_create: Auto,
+                        compress: true,
+                    },
+                    bloom_filter_index: BloomFilterConfig {
+                        create_on_flush: Auto,
+                        create_on_compaction: Auto,
+                        apply_on_query: Auto,
+                        mem_threshold_on_create: Auto,
+                    },
+                    memtable: TimeSeries,
+                    min_compaction_interval: 0ns,
+                },
+            ),
+            File(
+                EngineConfig,
+            ),
+        ],
+        logging: LoggingOptions {
+            dir: "./greptimedb_data/logs",
+            level: None,
+            log_format: Text,
+            max_log_files: 720,
+            append_stdout: true,
+            enable_otlp_tracing: false,
+            otlp_endpoint: None,
+            tracing_sample_ratio: None,
+            otlp_export_protocol: None,
+        },
+        enable_telemetry: true,
+        export_metrics: ExportMetricsOption {
+            enable: false,
+            write_interval: 30s,
+            self_import: None,
+            remote_write: None,
+        },
+        tracing: TracingOptions,
+        query: QueryOptions {
+            parallelism: 0,
+            allow_query_fallback: false,
+        },
+        memory: MemoryOptions {
+            enable_heap_profiling: true,
+        },
+        rpc_addr: None,
+        rpc_hostname: None,
+        rpc_runtime_size: None,
+        rpc_max_recv_message_size: None,
+        rpc_max_send_message_size: None,
+    },
+}
+2025-08-27T10:00:45.099704Z  INFO meta_client: Creating Datanode { member_id: 1 } instance with Metasrv addrs ["127.0.0.1:3002"]
+2025-08-27T10:00:45.099732Z  INFO meta_client::client: MetaClient channel config: ChannelConfig { timeout: Some(3s), connect_timeout: Some(1s), concurrency_limit: None, rate_limit: None, initial_stream_window_size: None, initial_connection_window_size: None, http2_keep_alive_interval: Some(30s), http2_keep_alive_timeout: None, http2_keep_alive_while_idle: Some(true), http2_adaptive_window: None, tcp_keepalive: None, tcp_nodelay: true, client_tls: None, max_recv_message_size: 512.0MiB, max_send_message_size: 512.0MiB, send_compression: false, accept_compression: false }
+2025-08-27T10:00:45.099739Z  INFO meta_client::client: Heartbeat client started
+2025-08-27T10:00:45.099748Z  INFO meta_client::client: Store client started
+2025-08-27T10:00:45.099778Z  INFO common_grpc::channel_manager: ChannelManager: 1, channel recycle is started, running in the background!
+2025-08-27T10:00:45.100539Z  INFO cmd::datanode: Building datanode with StartCommand {
+    node_id: None,
+    rpc_bind_addr: None,
+    rpc_server_addr: None,
+    metasrv_addrs: None,
+    config_file: Some(
+        "examples/datanode-file.toml",
+    ),
+    data_home: None,
+    wal_dir: None,
+    http_addr: None,
+    http_timeout: None,
+    env_prefix: "GREPTIMEDB_DATANODE",
+}
+2025-08-27T10:00:45.101137Z  INFO object_store::factory: The file storage home is: ./greptimedb_data/
+2025-08-27T10:00:45.101144Z  INFO object_store::util: Begin to clean temp storage directory: ./greptimedb_data/tmp/
+2025-08-27T10:00:45.101319Z  INFO object_store::util: Cleaned temp storage directory: ./greptimedb_data/tmp/
+2025-08-27T10:00:45.101659Z  INFO datanode::datanode: Creating raft-engine logstore with config: RaftEngineConfig { dir: None, file_size: 128.0MiB, purge_threshold: 1.0GiB, purge_interval: 60s, read_batch_size: 128, sync_write: false, enable_log_recycle: true, prefill_log_files: false, sync_period: None, recovery_parallelism: 10 } and storage path: ./greptimedb_data/wal
+2025-08-27T10:00:45.102427Z  INFO log: Recovering raft logs takes 757.375µs    
+2025-08-27T10:00:45.102686Z  INFO mito2::sst::index::intermediate: Initializing intermediate manager, aux_path: ./greptimedb_data/index_intermediate
+2025-08-27T10:00:45.103477Z  INFO mito2::worker: Start region worker thread 0, init_check_delay: 73s
+2025-08-27T10:00:45.103524Z  INFO mito2::worker: Start region worker thread 1, init_check_delay: 158s
+2025-08-27T10:00:45.103606Z  INFO datanode::region_server: Region Engine mito is registered
+2025-08-27T10:00:45.103609Z  INFO mito2::worker: Start region worker thread 2, init_check_delay: 53s
+2025-08-27T10:00:45.103625Z  INFO datanode::region_server: Region Engine metric is registered
+2025-08-27T10:00:45.103626Z  INFO datanode::region_server: Region Engine file is registered
+2025-08-27T10:00:45.103633Z  INFO mito2::worker: Start region worker thread 4, init_check_delay: 7s
+2025-08-27T10:00:45.103636Z  INFO mito2::worker: Start region worker thread 3, init_check_delay: 83s
+2025-08-27T10:00:45.103677Z  INFO common_grpc::channel_manager: ChannelManager: 0, channel recycle is started, running in the background!
+2025-08-27T10:00:45.105805Z  INFO datanode::datanode: going to open 0 region(s)
+2025-08-27T10:00:45.105836Z  INFO datanode::datanode: all regions are opened
+2025-08-27T10:00:45.106080Z  INFO cmd: Starting app: greptime-datanode
+2025-08-27T10:00:45.106086Z  INFO datanode::datanode: Starting datanode instance...
+2025-08-27T10:00:45.106089Z  INFO datanode::heartbeat: Starting heartbeat to Metasrv with interval 3000. My node id is 1, address is 10.152.100.81:3001.
+2025-08-27T10:01:20.761633Z  INFO cmd: GreptimeDB version: 
+branch: 
+commit: 83f566ad20484549b7f550b79c0c71f1875ba663
+clean: true
+version: 0.16.0
+2025-08-27T10:01:20.761637Z  INFO cmd: command line arguments
+2025-08-27T10:01:20.761639Z  INFO cmd: argument: ./greptime
+2025-08-27T10:01:20.761640Z  INFO cmd: argument: datanode
+2025-08-27T10:01:20.761641Z  INFO cmd: argument: start
+2025-08-27T10:01:20.761642Z  INFO cmd: argument: --config-file
+2025-08-27T10:01:20.761644Z  INFO cmd: argument: examples/datanode-file.toml
+2025-08-27T10:01:20.761975Z  WARN cmd: Failed to activate heap profile err=0: Internal error
+1: Memory profiling is not enabled
+2025-08-27T10:01:20.762028Z  INFO servers::grpc: Using detected: 10.152.100.81:3001 as server address
+2025-08-27T10:01:20.762154Z  INFO cmd::datanode::builder: Initialized Datanode instance with GreptimeOptions {
+    runtime: RuntimeOptions {
+        global_rt_size: 10,
+        compact_rt_size: 5,
+    },
+    plugins: [],
+    component: DatanodeOptions {
+        node_id: Some(
+            1,
+        ),
+        workload_types: [
+            Hybrid,
+        ],
+        require_lease_before_startup: false,
+        init_regions_in_background: false,
+        init_regions_parallelism: 16,
+        grpc: GrpcOptions {
+            bind_addr: "127.0.0.1:3001",
+            server_addr: "10.152.100.81:3001",
+            max_recv_message_size: 512.0MiB,
+            max_send_message_size: 512.0MiB,
+            flight_compression: ArrowIpc,
+            runtime_size: 8,
+            tls: TlsOption {
+                mode: Disable,
+                cert_path: "",
+                key_path: "",
+                ca_cert_path: "",
+                watch: false,
+            },
+        },
+        heartbeat: HeartbeatOptions {
+            interval: 3s,
+            retry_interval: 3s,
+        },
+        http: HttpOptions {
+            addr: "127.0.0.1:4000",
+            timeout: 0ns,
+            disable_dashboard: true,
+            body_limit: 64.0MiB,
+            prom_validation_mode: Strict,
+            cors_allowed_origins: [],
+            enable_cors: true,
+        },
+        meta_client: Some(
+            MetaClientOptions {
+                metasrv_addrs: [
+                    "127.0.0.1:3002",
+                ],
+                timeout: 3s,
+                heartbeat_timeout: 500ms,
+                ddl_timeout: 10s,
+                connect_timeout: 1s,
+                tcp_nodelay: true,
+                metadata_cache_max_capacity: 100000,
+                metadata_cache_ttl: 600s,
+                metadata_cache_tti: 300s,
+            },
+        ),
+        wal: RaftEngine(
+            RaftEngineConfig {
+                dir: None,
+                file_size: 128.0MiB,
+                purge_threshold: 1.0GiB,
+                purge_interval: 60s,
+                read_batch_size: 128,
+                sync_write: false,
+                enable_log_recycle: true,
+                prefill_log_files: false,
+                sync_period: None,
+                recovery_parallelism: 10,
+            },
+        ),
+        storage: StorageConfig {
+            data_home: "./greptimedb_data",
+            store: File(
+                FileConfig,
+            ),
+            providers: [],
+        },
+        max_concurrent_queries: 0,
+        region_engine: [
+            Mito(
+                MitoConfig {
+                    num_workers: 5,
+                    worker_channel_size: 128,
+                    worker_request_batch_size: 64,
+                    manifest_checkpoint_distance: 10,
+                    compress_manifest: false,
+                    max_background_flushes: 5,
+                    max_background_compactions: 3,
+                    max_background_purges: 10,
+                    auto_flush_interval: 1800s,
+                    global_write_buffer_size: 1.0GiB,
+                    global_write_buffer_reject_size: 2.0GiB,
+                    sst_meta_cache_size: 128.0MiB,
+                    vector_cache_size: 512.0MiB,
+                    page_cache_size: 2.0GiB,
+                    selector_result_cache_size: 512.0MiB,
+                    enable_write_cache: false,
+                    write_cache_path: "",
+                    write_cache_size: 5.0GiB,
+                    write_cache_ttl: None,
+                    sst_write_buffer_size: 8.0MiB,
+                    parallel_scan_channel_size: 32,
+                    max_concurrent_scan_files: 128,
+                    allow_stale_entries: false,
+                    index: IndexConfig {
+                        aux_path: "",
+                        staging_size: 2.0GiB,
+                        staging_ttl: Some(
+                            604800s,
+                        ),
+                        write_buffer_size: 8.0MiB,
+                        metadata_cache_size: 64.0MiB,
+                        content_cache_size: 128.0MiB,
+                        content_cache_page_size: 64.0KiB,
+                        result_cache_size: 128.0MiB,
+                    },
+                    inverted_index: InvertedIndexConfig {
+                        create_on_flush: Auto,
+                        create_on_compaction: Auto,
+                        apply_on_query: Auto,
+                        mem_threshold_on_create: Auto,
+                        intermediate_path: "",
+                        write_buffer_size: 8.0MiB,
+                    },
+                    fulltext_index: FulltextIndexConfig {
+                        create_on_flush: Auto,
+                        create_on_compaction: Auto,
+                        apply_on_query: Auto,
+                        mem_threshold_on_create: Auto,
+                        compress: true,
+                    },
+                    bloom_filter_index: BloomFilterConfig {
+                        create_on_flush: Auto,
+                        create_on_compaction: Auto,
+                        apply_on_query: Auto,
+                        mem_threshold_on_create: Auto,
+                    },
+                    memtable: TimeSeries,
+                    min_compaction_interval: 0ns,
+                },
+            ),
+            File(
+                EngineConfig,
+            ),
+        ],
+        logging: LoggingOptions {
+            dir: "./greptimedb_data/logs",
+            level: None,
+            log_format: Text,
+            max_log_files: 720,
+            append_stdout: true,
+            enable_otlp_tracing: false,
+            otlp_endpoint: None,
+            tracing_sample_ratio: None,
+            otlp_export_protocol: None,
+        },
+        enable_telemetry: true,
+        export_metrics: ExportMetricsOption {
+            enable: false,
+            write_interval: 30s,
+            self_import: None,
+            remote_write: None,
+        },
+        tracing: TracingOptions,
+        query: QueryOptions {
+            parallelism: 0,
+            allow_query_fallback: false,
+        },
+        memory: MemoryOptions {
+            enable_heap_profiling: true,
+        },
+        rpc_addr: None,
+        rpc_hostname: None,
+        rpc_runtime_size: None,
+        rpc_max_recv_message_size: None,
+        rpc_max_send_message_size: None,
+    },
+}
+2025-08-27T10:01:20.762214Z  INFO meta_client: Creating Datanode { member_id: 1 } instance with Metasrv addrs ["127.0.0.1:3002"]
+2025-08-27T10:01:20.762242Z  INFO meta_client::client: MetaClient channel config: ChannelConfig { timeout: Some(3s), connect_timeout: Some(1s), concurrency_limit: None, rate_limit: None, initial_stream_window_size: None, initial_connection_window_size: None, http2_keep_alive_interval: Some(30s), http2_keep_alive_timeout: None, http2_keep_alive_while_idle: Some(true), http2_adaptive_window: None, tcp_keepalive: None, tcp_nodelay: true, client_tls: None, max_recv_message_size: 512.0MiB, max_send_message_size: 512.0MiB, send_compression: false, accept_compression: false }
+2025-08-27T10:01:20.762252Z  INFO meta_client::client: Heartbeat client started
+2025-08-27T10:01:20.762261Z  INFO meta_client::client: Store client started
+2025-08-27T10:01:20.762285Z  INFO common_grpc::channel_manager: ChannelManager: 1, channel recycle is started, running in the background!
+2025-08-27T10:01:20.763083Z  INFO cmd::datanode: Building datanode with StartCommand {
+    node_id: None,
+    rpc_bind_addr: None,
+    rpc_server_addr: None,
+    metasrv_addrs: None,
+    config_file: Some(
+        "examples/datanode-file.toml",
+    ),
+    data_home: None,
+    wal_dir: None,
+    http_addr: None,
+    http_timeout: None,
+    env_prefix: "GREPTIMEDB_DATANODE",
+}
+2025-08-27T10:01:20.763706Z  INFO object_store::factory: The file storage home is: ./greptimedb_data/
+2025-08-27T10:01:20.763715Z  INFO object_store::util: Begin to clean temp storage directory: ./greptimedb_data/tmp/
+2025-08-27T10:01:20.763892Z  INFO object_store::util: Cleaned temp storage directory: ./greptimedb_data/tmp/
+2025-08-27T10:01:20.764229Z  INFO datanode::datanode: Creating raft-engine logstore with config: RaftEngineConfig { dir: None, file_size: 128.0MiB, purge_threshold: 1.0GiB, purge_interval: 60s, read_batch_size: 128, sync_write: false, enable_log_recycle: true, prefill_log_files: false, sync_period: None, recovery_parallelism: 10 } and storage path: ./greptimedb_data/wal
+2025-08-27T10:01:20.764752Z  INFO log: Recovering raft logs takes 512.167µs    
+2025-08-27T10:01:20.765018Z  INFO mito2::sst::index::intermediate: Initializing intermediate manager, aux_path: ./greptimedb_data/index_intermediate
+2025-08-27T10:01:20.766224Z  INFO mito2::worker: Start region worker thread 0, init_check_delay: 142s
+2025-08-27T10:01:20.766226Z  INFO mito2::worker: Start region worker thread 1, init_check_delay: 178s
+2025-08-27T10:01:20.766228Z  INFO mito2::worker: Start region worker thread 2, init_check_delay: 50s
+2025-08-27T10:01:20.766236Z  INFO datanode::region_server: Region Engine mito is registered
+2025-08-27T10:01:20.766266Z  INFO mito2::worker: Start region worker thread 4, init_check_delay: 132s
+2025-08-27T10:01:20.766268Z  INFO datanode::region_server: Region Engine metric is registered
+2025-08-27T10:01:20.766270Z  INFO datanode::region_server: Region Engine file is registered
+2025-08-27T10:01:20.766333Z  INFO mito2::worker: Start region worker thread 3, init_check_delay: 168s
+2025-08-27T10:01:20.766376Z  INFO common_grpc::channel_manager: ChannelManager: 0, channel recycle is started, running in the background!
+2025-08-27T10:01:20.768487Z  INFO datanode::datanode: going to open 0 region(s)
+2025-08-27T10:01:20.768520Z  INFO datanode::datanode: all regions are opened
+2025-08-27T10:01:20.768772Z  INFO cmd: Starting app: greptime-datanode
+2025-08-27T10:01:20.768779Z  INFO datanode::datanode: Starting datanode instance...
+2025-08-27T10:01:20.768783Z  INFO datanode::heartbeat: Starting heartbeat to Metasrv with interval 3000. My node id is 1, address is 10.152.100.81:3001.
+2025-08-27T10:03:19.291347Z  INFO cmd: GreptimeDB version: 
+branch: 
+commit: 83f566ad20484549b7f550b79c0c71f1875ba663
+clean: true
+version: 0.16.0
+2025-08-27T10:03:19.291351Z  INFO cmd: command line arguments
+2025-08-27T10:03:19.291353Z  INFO cmd: argument: ./greptime
+2025-08-27T10:03:19.291354Z  INFO cmd: argument: frontend
+2025-08-27T10:03:19.291355Z  INFO cmd: argument: start
+2025-08-27T10:03:19.291356Z  INFO cmd: argument: --config-file
+2025-08-27T10:03:19.291357Z  INFO cmd: argument: examples/frontend.toml
+2025-08-27T10:03:19.291691Z  WARN cmd: Failed to activate heap profile err=0: Internal error
+1: Memory profiling is not enabled
+2025-08-27T10:03:19.291711Z  INFO cmd::frontend: Frontend start command: StartCommand {
+    rpc_bind_addr: None,
+    rpc_server_addr: None,
+    http_addr: None,
+    http_timeout: None,
+    mysql_addr: None,
+    postgres_addr: None,
+    config_file: Some(
+        "examples/frontend.toml",
+    ),
+    influxdb_enable: None,
+    metasrv_addrs: None,
+    tls_mode: None,
+    tls_cert_path: None,
+    tls_key_path: None,
+    user_provider: None,
+    disable_dashboard: None,
+    env_prefix: "GREPTIMEDB_FRONTEND",
+}
+2025-08-27T10:03:19.292409Z  INFO cmd::frontend: Frontend options: GreptimeOptions {
+    runtime: RuntimeOptions {
+        global_rt_size: 10,
+        compact_rt_size: 5,
+    },
+    plugins: [],
+    component: FrontendOptions {
+        node_id: None,
+        default_timezone: None,
+        heartbeat: HeartbeatOptions {
+            interval: 18s,
+            retry_interval: 3s,
+        },
+        http: HttpOptions {
+            addr: "127.0.0.1:4000",
+            timeout: 0ns,
+            disable_dashboard: false,
+            body_limit: 64.0MiB,
+            prom_validation_mode: Strict,
+            cors_allowed_origins: [],
+            enable_cors: true,
+        },
+        grpc: GrpcOptions {
+            bind_addr: "127.0.0.1:4001",
+            server_addr: "",
+            max_recv_message_size: 512.0MiB,
+            max_send_message_size: 512.0MiB,
+            flight_compression: ArrowIpc,
+            runtime_size: 8,
+            tls: TlsOption {
+                mode: Disable,
+                cert_path: "",
+                key_path: "",
+                ca_cert_path: "",
+                watch: false,
+            },
+        },
+        mysql: MysqlOptions {
+            enable: true,
+            addr: "127.0.0.1:4002",
+            runtime_size: 2,
+            tls: TlsOption {
+                mode: Disable,
+                cert_path: "",
+                key_path: "",
+                ca_cert_path: "",
+                watch: false,
+            },
+            reject_no_database: None,
+            keep_alive: 0ns,
+        },
+        postgres: PostgresOptions {
+            enable: true,
+            addr: "127.0.0.1:4003",
+            runtime_size: 2,
+            tls: TlsOption {
+                mode: Disable,
+                cert_path: "",
+                key_path: "",
+                ca_cert_path: "",
+                watch: false,
+            },
+            keep_alive: 0ns,
+        },
+        opentsdb: OpentsdbOptions {
+            enable: true,
+        },
+        influxdb: InfluxdbOptions {
+            enable: true,
+        },
+        prom_store: PromStoreOptions {
+            enable: true,
+            with_metric_engine: true,
+        },
+        jaeger: JaegerOptions {
+            enable: true,
+        },
+        otlp: OtlpOptions {
+            enable: true,
+        },
+        meta_client: None,
+        logging: LoggingOptions {
+            dir: "./greptimedb_data/logs",
+            level: None,
+            log_format: Text,
+            max_log_files: 720,
+            append_stdout: true,
+            enable_otlp_tracing: false,
+            otlp_endpoint: None,
+            tracing_sample_ratio: None,
+            otlp_export_protocol: None,
+        },
+        datanode: DatanodeClientOptions {
+            client: ClientOptions {
+                timeout: 10s,
+                connect_timeout: 1s,
+                tcp_nodelay: true,
+            },
+        },
+        user_provider: None,
+        export_metrics: ExportMetricsOption {
+            enable: false,
+            write_interval: 30s,
+            self_import: None,
+            remote_write: None,
+        },
+        tracing: TracingOptions,
+        query: QueryOptions {
+            parallelism: 0,
+            allow_query_fallback: false,
+        },
+        max_in_flight_write_bytes: None,
+        slow_query: Some(
+            SlowQueryOptions {
+                enable: true,
+                record_type: SystemTable,
+                threshold: Some(
+                    30s,
+                ),
+                sample_ratio: Some(
+                    1.0,
+                ),
+                ttl: Some(
+                    "30d",
+                ),
+            },
+        ),
+        memory: MemoryOptions {
+            enable_heap_profiling: true,
+        },
+    },
+}
+2025-08-27T10:03:19.292478Z  INFO servers::grpc: Using detected: 10.152.100.81:4001 as server address
