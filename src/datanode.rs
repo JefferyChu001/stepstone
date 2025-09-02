@@ -195,11 +195,14 @@ impl DatanodeChecker {
                     Some(start.elapsed()),
                 ));
 
+                // First, test bucket access permissions
+                self.test_s3_bucket_permissions(&op, &mut details).await;
+
                 // Test basic operations
                 let test_key = format!("stepstone-test/{}", Uuid::new_v4());
                 let test_data = b"stepstone-test-data";
 
-                // PUT test
+                // PUT test (this tests write permissions)
                 match op.write(&test_key, test_data.as_slice()).await {
                     Ok(_) => {
                         details.push(CheckDetail::pass(
@@ -601,40 +604,40 @@ impl DatanodeChecker {
         use std::time::Instant;
         use tokio::time::{timeout, Duration};
 
-        // Test small file performance (1KB)
-        let small_data = vec![0u8; 1024]; // 1KB
-        let small_key = "stepstone_perf_test_small";
+        // Test small file performance (64MB)
+        let small_data = vec![0u8; 64 * 1024 * 1024]; // 64MB
+        let small_key = "stepstone_perf_test_64mb";
 
         let start = Instant::now();
-        match timeout(Duration::from_secs(10), op.write(small_key, small_data.clone())).await {
+        match timeout(Duration::from_secs(120), op.write(small_key, small_data.clone())).await {
             Ok(Ok(_)) => {
                 let write_duration = start.elapsed();
-                let throughput_kbps = (1024.0 / write_duration.as_secs_f64()) / 1024.0;
+                let throughput_mbps = 64.0 / write_duration.as_secs_f64();
 
                 details.push(CheckDetail::pass(
-                    "S3 Small File Write Performance".to_string(),
-                    format!("1KB write: {:.2}ms ({:.2} KB/s)",
-                           write_duration.as_millis(), throughput_kbps),
+                    "S3 64MB File Write Performance".to_string(),
+                    format!("64MB write: {:.2}ms ({:.2} MB/s)",
+                           write_duration.as_millis(), throughput_mbps),
                     Some(write_duration),
                 ));
 
                 // Test read performance
                 let start = Instant::now();
-                match timeout(Duration::from_secs(10), op.read(small_key)).await {
+                match timeout(Duration::from_secs(120), op.read(small_key)).await {
                     Ok(Ok(data)) => {
                         let read_duration = start.elapsed();
-                        let read_throughput_kbps = (data.len() as f64 / read_duration.as_secs_f64()) / 1024.0;
+                        let read_throughput_mbps = (data.len() as f64 / read_duration.as_secs_f64()) / (1024.0 * 1024.0);
 
                         details.push(CheckDetail::pass(
-                            "S3 Small File Read Performance".to_string(),
-                            format!("1KB read: {:.2}ms ({:.2} KB/s)",
-                                   read_duration.as_millis(), read_throughput_kbps),
+                            "S3 64MB File Read Performance".to_string(),
+                            format!("64MB read: {:.2}ms ({:.2} MB/s)",
+                                   read_duration.as_millis(), read_throughput_mbps),
                             Some(read_duration),
                         ));
                     }
                     Ok(Err(e)) => {
                         details.push(CheckDetail::warning(
-                            "S3 Small File Read Performance".to_string(),
+                            "S3 64MB File Read Performance".to_string(),
                             format!("Read test failed: {}", e),
                             None,
                             Some("Performance test incomplete".to_string()),
@@ -642,8 +645,8 @@ impl DatanodeChecker {
                     }
                     Err(_) => {
                         details.push(CheckDetail::warning(
-                            "S3 Small File Read Performance".to_string(),
-                            "Read test timed out (>10s)".to_string(),
+                            "S3 64MB File Read Performance".to_string(),
+                            "Read test timed out (>120s)".to_string(),
                             None,
                             Some("S3 read performance may be slow".to_string()),
                         ));
@@ -655,7 +658,7 @@ impl DatanodeChecker {
             }
             Ok(Err(e)) => {
                 details.push(CheckDetail::warning(
-                    "S3 Small File Write Performance".to_string(),
+                    "S3 64MB File Write Performance".to_string(),
                     format!("Write test failed: {}", e),
                     None,
                     Some("Performance test incomplete".to_string()),
@@ -663,27 +666,27 @@ impl DatanodeChecker {
             }
             Err(_) => {
                 details.push(CheckDetail::warning(
-                    "S3 Small File Write Performance".to_string(),
-                    "Write test timed out (>10s)".to_string(),
+                    "S3 64MB File Write Performance".to_string(),
+                    "Write test timed out (>120s)".to_string(),
                     None,
                     Some("S3 write performance may be slow".to_string()),
                 ));
             }
         }
 
-        // Test larger file performance (1MB) - but with shorter timeout for demo
-        let large_data = vec![0u8; 1024 * 1024]; // 1MB
-        let large_key = "stepstone_perf_test_large";
+        // Test larger file performance (1GB)
+        let large_data = vec![0u8; 1024 * 1024 * 1024]; // 1GB
+        let large_key = "stepstone_perf_test_1gb";
 
         let start = Instant::now();
-        match timeout(Duration::from_secs(30), op.write(large_key, large_data.clone())).await {
+        match timeout(Duration::from_secs(300), op.write(large_key, large_data.clone())).await {
             Ok(Ok(_)) => {
                 let write_duration = start.elapsed();
-                let throughput_mbps = 1.0 / write_duration.as_secs_f64();
+                let throughput_mbps = 1024.0 / write_duration.as_secs_f64();
 
                 details.push(CheckDetail::pass(
-                    "S3 Large File Write Performance".to_string(),
-                    format!("1MB write: {:.2}ms ({:.2} MB/s)",
+                    "S3 1GB File Write Performance".to_string(),
+                    format!("1GB write: {:.2}ms ({:.2} MB/s)",
                            write_duration.as_millis(), throughput_mbps),
                     Some(write_duration),
                 ));
@@ -693,16 +696,16 @@ impl DatanodeChecker {
             }
             Ok(Err(e)) => {
                 details.push(CheckDetail::warning(
-                    "S3 Large File Write Performance".to_string(),
-                    format!("Large file write test failed: {}", e),
+                    "S3 1GB File Write Performance".to_string(),
+                    format!("1GB file write test failed: {}", e),
                     None,
                     Some("May indicate bandwidth or timeout issues".to_string()),
                 ));
             }
             Err(_) => {
                 details.push(CheckDetail::warning(
-                    "S3 Large File Write Performance".to_string(),
-                    "Large file write test timed out (>30s)".to_string(),
+                    "S3 1GB File Write Performance".to_string(),
+                    "1GB file write test timed out (>300s)".to_string(),
                     None,
                     Some("S3 write performance for large files may be slow".to_string()),
                 ));
@@ -718,7 +721,7 @@ impl DatanodeChecker {
         use std::time::Instant;
         use tokio::time::{timeout, Duration};
 
-        let concurrent_count = 5;
+        let concurrent_count = 100;
         let data = vec![0u8; 512]; // 512 bytes per operation
 
         let start = Instant::now();
@@ -762,8 +765,8 @@ impl DatanodeChecker {
         } else {
             details.push(CheckDetail::warning(
                 "S3 Concurrent Operations".to_string(),
-                format!("{}/{} concurrent writes succeeded: {:.2}ms",
-                       successful_ops, concurrent_count, total_duration.as_millis()),
+                format!("{}/{} concurrent writes succeeded: {:.2}ms ({:.1} ops/s)",
+                       successful_ops, concurrent_count, total_duration.as_millis(), ops_per_second),
                 Some(total_duration),
                 Some("Some concurrent operations failed or timed out".to_string()),
             ));
@@ -772,6 +775,120 @@ impl DatanodeChecker {
         // Cleanup
         for key in keys_to_cleanup {
             let _ = op.delete(&key).await;
+        }
+    }
+
+    /// Test S3 bucket permissions (list, read, write, delete)
+    async fn test_s3_bucket_permissions(&self, op: &opendal::Operator, details: &mut Vec<CheckDetail>) {
+        use std::time::Instant;
+        use tokio::time::{timeout, Duration};
+
+        // Test 1: List bucket contents (requires ListBucket permission)
+        let start = Instant::now();
+        match timeout(Duration::from_secs(30), op.list("")).await {
+            Ok(Ok(_)) => {
+                details.push(CheckDetail::pass(
+                    "S3 Bucket List Permission".to_string(),
+                    "Successfully listed bucket contents (ListBucket permission verified)".to_string(),
+                    Some(start.elapsed()),
+                ));
+            }
+            Ok(Err(e)) => {
+                let error_msg = format!("{}", e);
+                if error_msg.contains("AccessDenied") || error_msg.contains("Forbidden") {
+                    details.push(CheckDetail::fail(
+                        "S3 Bucket List Permission".to_string(),
+                        format!("Access denied for bucket listing: {}", e),
+                        Some(start.elapsed()),
+                        Some("Check if the AKSK has ListBucket permission for this bucket".to_string()),
+                    ));
+                } else if error_msg.contains("NoSuchBucket") {
+                    details.push(CheckDetail::fail(
+                        "S3 Bucket Existence".to_string(),
+                        format!("Bucket does not exist: {}", e),
+                        Some(start.elapsed()),
+                        Some("Create the bucket or check the bucket name in configuration".to_string()),
+                    ));
+                } else if error_msg.contains("InvalidAccessKeyId") {
+                    details.push(CheckDetail::fail(
+                        "S3 Access Key Validation".to_string(),
+                        format!("Invalid access key: {}", e),
+                        Some(start.elapsed()),
+                        Some("Check the access_key_id in configuration".to_string()),
+                    ));
+                } else if error_msg.contains("SignatureDoesNotMatch") {
+                    details.push(CheckDetail::fail(
+                        "S3 Secret Key Validation".to_string(),
+                        format!("Invalid secret key: {}", e),
+                        Some(start.elapsed()),
+                        Some("Check the secret_access_key in configuration".to_string()),
+                    ));
+                } else {
+                    details.push(CheckDetail::warning(
+                        "S3 Bucket List Permission".to_string(),
+                        format!("Bucket listing failed: {}", e),
+                        Some(start.elapsed()),
+                        Some("This may indicate network issues or other S3 service problems".to_string()),
+                    ));
+                }
+            }
+            Err(_) => {
+                details.push(CheckDetail::warning(
+                    "S3 Bucket List Permission".to_string(),
+                    "Bucket listing timed out (>30s)".to_string(),
+                    Some(start.elapsed()),
+                    Some("Check network connectivity to S3 endpoint".to_string()),
+                ));
+            }
+        }
+
+        // Test 2: Write permission test (will be done in main PUT test)
+        // Test 3: Read permission test (will be done in main GET test)
+        // Test 4: Delete permission test (will be done in main DELETE test)
+
+        // Test 5: Try to access a non-existent object to test error handling
+        let non_existent_key = format!("stepstone-nonexistent-{}", uuid::Uuid::new_v4());
+        match timeout(Duration::from_secs(10), op.read(&non_existent_key)).await {
+            Ok(Err(e)) => {
+                let error_msg = format!("{}", e);
+                if error_msg.contains("NoSuchKey") || error_msg.contains("NotFound") {
+                    details.push(CheckDetail::pass(
+                        "S3 Read Permission (Error Handling)".to_string(),
+                        "Correctly returned 'not found' for non-existent object".to_string(),
+                        None,
+                    ));
+                } else if error_msg.contains("AccessDenied") || error_msg.contains("Forbidden") {
+                    details.push(CheckDetail::fail(
+                        "S3 Read Permission".to_string(),
+                        format!("Access denied for reading objects: {}", e),
+                        None,
+                        Some("Check if the AKSK has GetObject permission for this bucket".to_string()),
+                    ));
+                } else {
+                    details.push(CheckDetail::warning(
+                        "S3 Read Permission (Error Handling)".to_string(),
+                        format!("Unexpected error for non-existent object: {}", e),
+                        None,
+                        Some("This may indicate permission or configuration issues".to_string()),
+                    ));
+                }
+            }
+            Ok(Ok(_)) => {
+                details.push(CheckDetail::warning(
+                    "S3 Read Permission (Error Handling)".to_string(),
+                    "Unexpectedly found data for non-existent object".to_string(),
+                    None,
+                    Some("This may indicate caching issues or incorrect object naming".to_string()),
+                ));
+            }
+            Err(_) => {
+                details.push(CheckDetail::warning(
+                    "S3 Read Permission (Error Handling)".to_string(),
+                    "Read test for non-existent object timed out".to_string(),
+                    None,
+                    Some("Check network connectivity to S3 endpoint".to_string()),
+                ));
+            }
         }
     }
 }
