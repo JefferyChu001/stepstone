@@ -588,13 +588,12 @@ mod tests {
     #[test]
     fn test_metasrv_config_parsing() {
         let toml_content = r#"
-[store]
-store_type = "etcd_store"
+data_home = "./test_data"
 store_addrs = ["127.0.0.1:2379"]
 store_key_prefix = "/greptime"
-max_txn_ops = 128
+backend = "etcd_store"
 
-[server]
+[grpc]
 addr = "0.0.0.0:3002"
 "#;
 
@@ -610,34 +609,47 @@ addr = "0.0.0.0:3002"
     #[test]
     fn test_frontend_config_parsing() {
         let toml_content = r#"
-metasrv_addrs = ["127.0.0.1:3002", "127.0.0.1:3003"]
+default_timezone = "UTC"
 
-[server]
+[meta_client]
+metasrv_addrs = ["127.0.0.1:3002", "127.0.0.1:3003"]
+timeout = "3s"
+
+[http]
 addr = "0.0.0.0:4000"
-http_addr = "0.0.0.0:4001"
-grpc_addr = "0.0.0.0:4002"
+
+[grpc]
+addr = "0.0.0.0:4001"
 "#;
 
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(toml_content.as_bytes()).unwrap();
 
         let config = ConfigParser::parse_frontend_config(temp_file.path()).unwrap();
-        assert_eq!(config.metasrv_addrs, vec!["127.0.0.1:3002", "127.0.0.1:3003"]);
-        assert!(config.server.is_some());
+        assert!(config.meta_client.is_some());
+        let meta_client = config.meta_client.unwrap();
+        assert_eq!(meta_client.metasrv_addrs, vec!["127.0.0.1:3002", "127.0.0.1:3003"]);
 
-        let server = config.server.unwrap();
-        assert_eq!(server.addr, Some("0.0.0.0:4000".to_string()));
-        assert_eq!(server.http_addr, Some("0.0.0.0:4001".to_string()));
-        assert_eq!(server.grpc_addr, Some("0.0.0.0:4002".to_string()));
+        assert!(config.http.is_some());
+        let http = config.http.unwrap();
+        assert_eq!(http.addr, Some("0.0.0.0:4000".to_string()));
+
+        assert!(config.grpc.is_some());
+        let grpc = config.grpc.unwrap();
+        assert_eq!(grpc.addr, Some("0.0.0.0:4001".to_string()));
     }
 
     #[test]
     fn test_datanode_config_parsing() {
         let toml_content = r#"
+node_id = 1
+
+[meta_client]
 metasrv_addrs = ["127.0.0.1:3002"]
+timeout = "3s"
 
 [storage]
-storage_type = "S3"
+type = "S3"
 bucket = "my-bucket"
 access_key_id = "my-key"
 secret_access_key = "my-secret"
@@ -648,13 +660,16 @@ region = "us-west-2"
         temp_file.write_all(toml_content.as_bytes()).unwrap();
 
         let config = ConfigParser::parse_datanode_config(temp_file.path()).unwrap();
-        assert_eq!(config.metasrv_addrs, vec!["127.0.0.1:3002"]);
-        assert_eq!(config.storage.storage_type, "S3");
+        assert!(config.meta_client.is_some());
+        let meta_client = config.meta_client.unwrap();
+        assert_eq!(meta_client.metasrv_addrs, vec!["127.0.0.1:3002"]);
 
-        let s3_config = config.storage.as_s3_config().unwrap();
-        assert_eq!(s3_config.bucket, "my-bucket");
-        assert_eq!(s3_config.access_key_id, "my-key");
-        assert_eq!(s3_config.secret_access_key, "my-secret");
-        assert_eq!(s3_config.region, Some("us-west-2".to_string()));
+        assert!(config.storage.is_some());
+        let storage = config.storage.unwrap();
+        assert_eq!(storage.storage_type, Some("S3".to_string()));
+        assert_eq!(storage.bucket, Some("my-bucket".to_string()));
+        assert_eq!(storage.access_key_id, Some("my-key".to_string()));
+        assert_eq!(storage.secret_access_key, Some("my-secret".to_string()));
+        assert_eq!(storage.region, Some("us-west-2".to_string()));
     }
 }

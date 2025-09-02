@@ -17,7 +17,7 @@
 use crate::common::{CheckDetail, CheckResult, CheckStatus};
 use crate::error;
 use std::time::Duration;
-use snafu::{ResultExt, IntoError};
+use snafu::IntoError;
 
 /// 测试错误处理逻辑
 #[cfg(test)]
@@ -284,7 +284,7 @@ mod performance_tests {
 mod s3_auth_error_tests {
     use super::*;
     use crate::common::ComponentChecker;
-    use crate::config::{DatanodeConfig, StorageConfig, ServerConfig};
+    use crate::config::{DatanodeConfig, DatanodeStorageConfig, MetaClientConfig};
     use crate::datanode::DatanodeChecker;
     use std::collections::HashMap;
 
@@ -299,16 +299,38 @@ mod s3_auth_error_tests {
         storage_config.insert("region".to_string(), toml::Value::String("us-east-1".to_string()));
 
         let datanode_config = DatanodeConfig {
-            metasrv_addrs: vec!["127.0.0.1:3002".to_string()],
-            storage: StorageConfig {
-                storage_type: "S3".to_string(),
-                config: storage_config,
-            },
-            server: Some(ServerConfig {
-                addr: None,
-                http_addr: None,
-                grpc_addr: None,
+            node_id: Some(1),
+            require_lease_before_startup: Some(false),
+            init_regions_in_background: Some(false),
+            init_regions_parallelism: Some(16),
+            max_concurrent_queries: Some(0),
+            enable_telemetry: Some(true),
+            http: None,
+            grpc: None,
+            heartbeat: None,
+            meta_client: Some(MetaClientConfig {
+                metasrv_addrs: vec!["127.0.0.1:3002".to_string()],
+                timeout: Some("3s".to_string()),
+                heartbeat_timeout: Some("500ms".to_string()),
+                ddl_timeout: Some("10s".to_string()),
+                connect_timeout: Some("1s".to_string()),
+                tcp_nodelay: Some(true),
             }),
+            wal: None,
+            storage: Some(DatanodeStorageConfig {
+                data_home: Some("./test_data".to_string()),
+                storage_type: Some("S3".to_string()),
+                cache_capacity: None,
+                cache_path: None,
+                bucket: Some("test-bucket".to_string()),
+                root: None,
+                access_key_id: Some("invalid-key".to_string()),
+                secret_access_key: Some("invalid-secret".to_string()),
+                endpoint: Some("https://s3.amazonaws.com".to_string()),
+                region: Some("us-east-1".to_string()),
+            }),
+            query: None,
+            logging: None,
         };
 
         let checker = DatanodeChecker::new(datanode_config, false);
@@ -351,26 +373,26 @@ mod s3_auth_error_tests {
 mod etcd_connection_error_tests {
     use super::*;
     use crate::common::ComponentChecker;
-    use crate::config::{MetasrvConfig, StoreConfig, ServerConfig, TlsConfig};
+    use crate::config::MetasrvConfig;
     use crate::metasrv::MetasrvChecker;
 
     #[tokio::test]
     async fn test_etcd_connection_failed() {
         // 构造无效的 etcd 配置（连接到不存在的端口）
         let metasrv_config = MetasrvConfig {
-            store: StoreConfig {
-                store_type: "etcd_store".to_string(),
-                store_addrs: vec!["127.0.0.1:9999".to_string()], // 不存在的端口
-                store_key_prefix: Some("/greptime".to_string()),
-                max_txn_ops: Some(128),
-                meta_table_name: None,
-                tls: None,
-            },
-            server: Some(ServerConfig {
-                addr: None,
-                http_addr: None,
-                grpc_addr: None,
-            }),
+            data_home: Some("./test_data".to_string()),
+            store_addrs: vec!["127.0.0.1:9999".to_string()], // 不存在的端口
+            store_key_prefix: Some("/greptime".to_string()),
+            backend: "etcd_store".to_string(),
+            meta_table_name: None,
+            meta_schema_name: None,
+            meta_election_lock_id: None,
+            selector: None,
+            use_memory_store: None,
+            enable_region_failover: None,
+            grpc: None,
+            http: None,
+            backend_tls: None,
         };
 
         let checker = MetasrvChecker::new(metasrv_config);
@@ -427,23 +449,34 @@ mod etcd_connection_error_tests {
 mod frontend_address_error_tests {
     use super::*;
     use crate::common::ComponentChecker;
-    use crate::config::{FrontendConfig, ServerConfig};
+    use crate::config::FrontendConfig;
     use crate::frontend::FrontendChecker;
 
     #[tokio::test]
     async fn test_frontend_invalid_address_format() {
+        use crate::config::{MetaClientConfig};
+
         // 构造无效的地址配置
         let frontend_config = FrontendConfig {
-            metasrv_addrs: vec![
-                "invalid-address".to_string(),        // 缺少端口
-                "localhost:abc".to_string(),           // 无效端口
-                "nonexistent-host:3002".to_string(),   // 不存在的主机
-            ],
-            server: Some(ServerConfig {
-                addr: Some("0.0.0.0:4000".to_string()),
-                http_addr: None,
-                grpc_addr: None,
+            data_home: Some("./test_data".to_string()),
+            default_timezone: Some("UTC".to_string()),
+            http: None,
+            grpc: None,
+            meta_client: Some(MetaClientConfig {
+                metasrv_addrs: vec![
+                    "invalid-address".to_string(),        // 缺少端口
+                    "localhost:abc".to_string(),           // 无效端口
+                    "nonexistent-host:3002".to_string(),   // 不存在的主机
+                ],
+                timeout: Some("3s".to_string()),
+                heartbeat_timeout: Some("500ms".to_string()),
+                ddl_timeout: Some("10s".to_string()),
+                connect_timeout: Some("1s".to_string()),
+                tcp_nodelay: Some(true),
             }),
+            heartbeat: None,
+            prometheus: None,
+            logging: None,
         };
 
         let checker = FrontendChecker::new(frontend_config);
@@ -510,9 +543,8 @@ mod frontend_address_error_tests {
 /// 测试磁盘性能不足场景
 #[cfg(test)]
 mod disk_performance_tests {
-    use super::*;
     use crate::common::ComponentChecker;
-    use crate::config::{DatanodeConfig, StorageConfig, ServerConfig};
+    use crate::config::{DatanodeConfig, DatanodeStorageConfig, MetaClientConfig};
     use crate::datanode::DatanodeChecker;
     use std::collections::HashMap;
 
@@ -523,16 +555,38 @@ mod disk_performance_tests {
         storage_config.insert("root".to_string(), toml::Value::String("/tmp/greptime_perf_test".to_string()));
 
         let datanode_config = DatanodeConfig {
-            metasrv_addrs: vec!["127.0.0.1:3002".to_string()],
-            storage: StorageConfig {
-                storage_type: "File".to_string(),
-                config: storage_config,
-            },
-            server: Some(ServerConfig {
-                addr: None,
-                http_addr: None,
-                grpc_addr: None,
+            node_id: Some(1),
+            require_lease_before_startup: Some(false),
+            init_regions_in_background: Some(false),
+            init_regions_parallelism: Some(16),
+            max_concurrent_queries: Some(0),
+            enable_telemetry: Some(true),
+            http: None,
+            grpc: None,
+            heartbeat: None,
+            meta_client: Some(MetaClientConfig {
+                metasrv_addrs: vec!["127.0.0.1:3002".to_string()],
+                timeout: Some("3s".to_string()),
+                heartbeat_timeout: Some("500ms".to_string()),
+                ddl_timeout: Some("10s".to_string()),
+                connect_timeout: Some("1s".to_string()),
+                tcp_nodelay: Some(true),
             }),
+            wal: None,
+            storage: Some(DatanodeStorageConfig {
+                data_home: Some("/tmp/greptime_perf_test".to_string()),
+                storage_type: Some("File".to_string()),
+                cache_capacity: None,
+                cache_path: None,
+                bucket: None,
+                root: None,
+                access_key_id: None,
+                secret_access_key: None,
+                endpoint: None,
+                region: None,
+            }),
+            query: None,
+            logging: None,
         };
 
         // 创建测试目录
@@ -600,7 +654,7 @@ mod disk_performance_tests {
 mod success_scenario_tests {
     use super::*;
     use crate::common::ComponentChecker;
-    use crate::config::{DatanodeConfig, StorageConfig, ServerConfig};
+    use crate::config::{DatanodeConfig, DatanodeStorageConfig, MetaClientConfig};
     use crate::datanode::DatanodeChecker;
     use std::collections::HashMap;
 
@@ -611,16 +665,38 @@ mod success_scenario_tests {
         storage_config.insert("root".to_string(), toml::Value::String("/tmp/greptime_success_test".to_string()));
 
         let datanode_config = DatanodeConfig {
-            metasrv_addrs: vec!["127.0.0.1:3002".to_string()],
-            storage: StorageConfig {
-                storage_type: "File".to_string(),
-                config: storage_config,
-            },
-            server: Some(ServerConfig {
-                addr: None,
-                http_addr: None,
-                grpc_addr: None,
+            node_id: Some(1),
+            require_lease_before_startup: Some(false),
+            init_regions_in_background: Some(false),
+            init_regions_parallelism: Some(16),
+            max_concurrent_queries: Some(0),
+            enable_telemetry: Some(true),
+            http: None,
+            grpc: None,
+            heartbeat: None,
+            meta_client: Some(MetaClientConfig {
+                metasrv_addrs: vec!["127.0.0.1:3002".to_string()],
+                timeout: Some("3s".to_string()),
+                heartbeat_timeout: Some("500ms".to_string()),
+                ddl_timeout: Some("10s".to_string()),
+                connect_timeout: Some("1s".to_string()),
+                tcp_nodelay: Some(true),
             }),
+            wal: None,
+            storage: Some(DatanodeStorageConfig {
+                data_home: Some("/tmp/greptime_success_test".to_string()),
+                storage_type: Some("File".to_string()),
+                cache_capacity: None,
+                cache_path: None,
+                bucket: None,
+                root: None,
+                access_key_id: None,
+                secret_access_key: None,
+                endpoint: None,
+                region: None,
+            }),
+            query: None,
+            logging: None,
         };
 
         // 创建测试目录
@@ -688,9 +764,8 @@ mod success_scenario_tests {
 /// 测试 JSON 输出格式的完整性
 #[cfg(test)]
 mod json_output_tests {
-    use super::*;
     use crate::common::ComponentChecker;
-    use crate::config::{DatanodeConfig, StorageConfig, ServerConfig};
+    use crate::config::{DatanodeConfig, DatanodeStorageConfig, MetaClientConfig};
     use crate::datanode::DatanodeChecker;
     use std::collections::HashMap;
 
@@ -701,16 +776,38 @@ mod json_output_tests {
         storage_config.insert("root".to_string(), toml::Value::String("/tmp/greptime_json_test".to_string()));
 
         let datanode_config = DatanodeConfig {
-            metasrv_addrs: vec!["127.0.0.1:3002".to_string()],
-            storage: StorageConfig {
-                storage_type: "File".to_string(),
-                config: storage_config,
-            },
-            server: Some(ServerConfig {
-                addr: None,
-                http_addr: None,
-                grpc_addr: None,
+            node_id: Some(1),
+            require_lease_before_startup: Some(false),
+            init_regions_in_background: Some(false),
+            init_regions_parallelism: Some(16),
+            max_concurrent_queries: Some(0),
+            enable_telemetry: Some(true),
+            http: None,
+            grpc: None,
+            heartbeat: None,
+            meta_client: Some(MetaClientConfig {
+                metasrv_addrs: vec!["127.0.0.1:3002".to_string()],
+                timeout: Some("3s".to_string()),
+                heartbeat_timeout: Some("500ms".to_string()),
+                ddl_timeout: Some("10s".to_string()),
+                connect_timeout: Some("1s".to_string()),
+                tcp_nodelay: Some(true),
             }),
+            wal: None,
+            storage: Some(DatanodeStorageConfig {
+                data_home: Some("/tmp/greptime_json_test".to_string()),
+                storage_type: Some("File".to_string()),
+                cache_capacity: None,
+                cache_path: None,
+                bucket: None,
+                root: None,
+                access_key_id: None,
+                secret_access_key: None,
+                endpoint: None,
+                region: None,
+            }),
+            query: None,
+            logging: None,
         };
 
         // 创建测试目录
