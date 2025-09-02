@@ -378,26 +378,25 @@ impl MetasrvChecker {
         let mut details = Vec::new();
         let start = Instant::now();
 
-        // Connect to etcd
+        // Connect to etcd and test basic operations
         match EtcdStore::with_endpoints(&self.config.store_addrs, 128).await {
             Ok(store) => {
-                details.push(CheckDetail::pass(
-                    "Etcd Connection".to_string(),
-                    format!("Successfully connected to etcd endpoints: {:?}", self.config.store_addrs),
-                    Some(start.elapsed()),
-                ));
-
-                // Test basic operations
+                // Test basic operations immediately to verify real connectivity
                 let test_key = format!("{}__stepstone_test", self.config.store_key_prefix.as_deref().unwrap_or(""));
                 let test_value = b"stepstone_test_value";
 
-                // PUT operation
+                // PUT operation (this will test real connectivity)
                 match store.put(PutRequest {
                     key: test_key.as_bytes().to_vec(),
                     value: test_value.to_vec(),
                     prev_kv: false,
                 }).await {
                     Ok(_) => {
+                        details.push(CheckDetail::pass(
+                            "Etcd Connection".to_string(),
+                            format!("Successfully connected to etcd endpoints: {:?}", self.config.store_addrs),
+                            Some(start.elapsed()),
+                        ));
                         details.push(CheckDetail::pass(
                             "Etcd PUT Operation".to_string(),
                             "PUT operation successful".to_string(),
@@ -461,10 +460,10 @@ impl MetasrvChecker {
                     }
                     Err(e) => {
                         details.push(CheckDetail::fail(
-                            "Etcd PUT Operation".to_string(),
-                            format!("PUT operation failed: {}", e),
-                            None,
-                            Some("Check etcd connectivity and write permissions".to_string()),
+                            "Etcd Connection".to_string(),
+                            format!("Failed to connect to etcd: {}", e),
+                            Some(start.elapsed()),
+                            Some("Check etcd service status and network connectivity".to_string()),
                         ));
                     }
                 }
@@ -511,6 +510,9 @@ impl MetasrvChecker {
                                     format!("Table '{}' exists", table_name),
                                     None,
                                 ));
+
+                                // Test read/write permissions on existing table
+                                self.test_postgres_permissions(&pool, table_name, &mut details).await;
                             } else {
                                 details.push(CheckDetail::warning(
                                     "Metadata Table Existence".to_string(),
@@ -518,6 +520,9 @@ impl MetasrvChecker {
                                     None,
                                     Some("This is normal for first-time setup".to_string()),
                                 ));
+
+                                // Test table creation permissions
+                                self.test_postgres_create_permissions(&pool, table_name, &mut details).await;
                             }
                         }
                         Err(e) => {
@@ -618,6 +623,98 @@ impl MetasrvChecker {
         }
 
         CheckResult::from_details(details)
+    }
+
+    /// Test PostgreSQL read/write permissions on existing table
+    async fn test_postgres_permissions(&self, pool: &PgPool, table_name: &str, details: &mut Vec<CheckDetail>) {
+        // Test SELECT permission
+        let select_query = format!("SELECT COUNT(*) FROM {}", table_name);
+        match sqlx::query_scalar::<_, i64>(&select_query).fetch_one(pool).await {
+            Ok(_) => {
+                details.push(CheckDetail::pass(
+                    "PostgreSQL Read Permission".to_string(),
+                    format!("Successfully read from table '{}'", table_name),
+                    None,
+                ));
+            }
+            Err(e) => {
+                details.push(CheckDetail::fail(
+                    "PostgreSQL Read Permission".to_string(),
+                    format!("Failed to read from table '{}': {}", table_name, e),
+                    None,
+                    Some("Grant SELECT permission on the metadata table".to_string()),
+                ));
+                return; // If we can't read, we probably can't write either
+            }
+        }
+
+        // Test INSERT permission with a test record
+        let test_key = "stepstone_test_key";
+        let test_value = "stepstone_test_value";
+        let insert_query = format!(
+            "INSERT INTO {} (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
+            table_name
+        );
+
+        match sqlx::query(&insert_query)
+            .bind(test_key)
+            .bind(test_value)
+            .execute(pool)
+            .await
+        {
+            Ok(_) => {
+                details.push(CheckDetail::pass(
+                    "PostgreSQL Write Permission".to_string(),
+                    format!("Successfully wrote to table '{}'", table_name),
+                    None,
+                ));
+
+                // Clean up test record
+                let delete_query = format!("DELETE FROM {} WHERE key = $1", table_name);
+                let _ = sqlx::query(&delete_query).bind(test_key).execute(pool).await;
+            }
+            Err(e) => {
+                details.push(CheckDetail::fail(
+                    "PostgreSQL Write Permission".to_string(),
+                    format!("Failed to write to table '{}': {}", table_name, e),
+                    None,
+                    Some("Grant INSERT/UPDATE permission on the metadata table".to_string()),
+                ));
+            }
+        }
+    }
+
+    /// Test PostgreSQL table creation permissions
+    async fn test_postgres_create_permissions(&self, pool: &PgPool, table_name: &str, details: &mut Vec<CheckDetail>) {
+        let create_query = format!(
+            "CREATE TABLE IF NOT EXISTS {} (
+                key VARCHAR(255) PRIMARY KEY,
+                value TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )",
+            table_name
+        );
+
+        match sqlx::query(&create_query).execute(pool).await {
+            Ok(_) => {
+                details.push(CheckDetail::pass(
+                    "PostgreSQL Create Permission".to_string(),
+                    format!("Successfully created/verified table '{}'", table_name),
+                    None,
+                ));
+
+                // Now test read/write on the newly created table
+                self.test_postgres_permissions(pool, table_name, details).await;
+            }
+            Err(e) => {
+                details.push(CheckDetail::fail(
+                    "PostgreSQL Create Permission".to_string(),
+                    format!("Failed to create table '{}': {}", table_name, e),
+                    None,
+                    Some("Grant CREATE permission on the database/schema".to_string()),
+                ));
+            }
+        }
     }
 }
 

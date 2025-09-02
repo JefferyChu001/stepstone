@@ -1,0 +1,17 @@
+# Test configuration for Metasrv with PostgreSQL backend (readonly user)
+data_home = "./test_data/metasrv"
+store_addrs = ["postgresql://greptime_readonly:readonly@localhost:5432/greptime_meta"]
+store_key_prefix = ""
+backend = "postgres_store"
+meta_table_name = "greptime_metasrv"
+meta_schema_name = "public"
+
+# gRPC server configuration
+[grpc]
+addr = "127.0.0.1:3002"
+runtime_size = 8
+
+# HTTP server configuration  
+[http]
+addr = "127.0.0.1:4001"
+timeout = "30s"

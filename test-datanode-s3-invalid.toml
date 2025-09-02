@@ -1,0 +1,15 @@
+# Test configuration for Datanode with S3 storage (invalid credentials)
+node_id = 2
+
+[meta_client]
+metasrv_addrs = ["127.0.0.1:3002"]
+timeout = "3s"
+
+[storage]
+type = "S3"
+bucket = "greptime-test-bucket"
+root = "test-data"
+access_key_id = "invalid_key"
+secret_access_key = "invalid_secret"
+endpoint = "http://localhost:9000"
+region = "us-east-1"

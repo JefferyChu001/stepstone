@@ -244,6 +244,9 @@ impl DatanodeChecker {
                                     "DELETE operation successful".to_string(),
                                     None,
                                 ));
+
+                                // Performance tests
+                                self.test_s3_performance(&op, &mut details).await;
                             }
                             Err(e) => {
                                 details.push(CheckDetail::warning(
@@ -589,5 +592,186 @@ impl ComponentChecker for DatanodeChecker {
 
     fn component_name(&self) -> &'static str {
         "Datanode"
+    }
+}
+
+impl DatanodeChecker {
+    /// Test S3 storage performance (throughput and latency)
+    async fn test_s3_performance(&self, op: &opendal::Operator, details: &mut Vec<CheckDetail>) {
+        use std::time::Instant;
+        use tokio::time::{timeout, Duration};
+
+        // Test small file performance (1KB)
+        let small_data = vec![0u8; 1024]; // 1KB
+        let small_key = "stepstone_perf_test_small";
+
+        let start = Instant::now();
+        match timeout(Duration::from_secs(10), op.write(small_key, small_data.clone())).await {
+            Ok(Ok(_)) => {
+                let write_duration = start.elapsed();
+                let throughput_kbps = (1024.0 / write_duration.as_secs_f64()) / 1024.0;
+
+                details.push(CheckDetail::pass(
+                    "S3 Small File Write Performance".to_string(),
+                    format!("1KB write: {:.2}ms ({:.2} KB/s)",
+                           write_duration.as_millis(), throughput_kbps),
+                    Some(write_duration),
+                ));
+
+                // Test read performance
+                let start = Instant::now();
+                match timeout(Duration::from_secs(10), op.read(small_key)).await {
+                    Ok(Ok(data)) => {
+                        let read_duration = start.elapsed();
+                        let read_throughput_kbps = (data.len() as f64 / read_duration.as_secs_f64()) / 1024.0;
+
+                        details.push(CheckDetail::pass(
+                            "S3 Small File Read Performance".to_string(),
+                            format!("1KB read: {:.2}ms ({:.2} KB/s)",
+                                   read_duration.as_millis(), read_throughput_kbps),
+                            Some(read_duration),
+                        ));
+                    }
+                    Ok(Err(e)) => {
+                        details.push(CheckDetail::warning(
+                            "S3 Small File Read Performance".to_string(),
+                            format!("Read test failed: {}", e),
+                            None,
+                            Some("Performance test incomplete".to_string()),
+                        ));
+                    }
+                    Err(_) => {
+                        details.push(CheckDetail::warning(
+                            "S3 Small File Read Performance".to_string(),
+                            "Read test timed out (>10s)".to_string(),
+                            None,
+                            Some("S3 read performance may be slow".to_string()),
+                        ));
+                    }
+                }
+
+                // Cleanup
+                let _ = op.delete(small_key).await;
+            }
+            Ok(Err(e)) => {
+                details.push(CheckDetail::warning(
+                    "S3 Small File Write Performance".to_string(),
+                    format!("Write test failed: {}", e),
+                    None,
+                    Some("Performance test incomplete".to_string()),
+                ));
+            }
+            Err(_) => {
+                details.push(CheckDetail::warning(
+                    "S3 Small File Write Performance".to_string(),
+                    "Write test timed out (>10s)".to_string(),
+                    None,
+                    Some("S3 write performance may be slow".to_string()),
+                ));
+            }
+        }
+
+        // Test larger file performance (1MB) - but with shorter timeout for demo
+        let large_data = vec![0u8; 1024 * 1024]; // 1MB
+        let large_key = "stepstone_perf_test_large";
+
+        let start = Instant::now();
+        match timeout(Duration::from_secs(30), op.write(large_key, large_data.clone())).await {
+            Ok(Ok(_)) => {
+                let write_duration = start.elapsed();
+                let throughput_mbps = 1.0 / write_duration.as_secs_f64();
+
+                details.push(CheckDetail::pass(
+                    "S3 Large File Write Performance".to_string(),
+                    format!("1MB write: {:.2}ms ({:.2} MB/s)",
+                           write_duration.as_millis(), throughput_mbps),
+                    Some(write_duration),
+                ));
+
+                // Cleanup large file
+                let _ = op.delete(large_key).await;
+            }
+            Ok(Err(e)) => {
+                details.push(CheckDetail::warning(
+                    "S3 Large File Write Performance".to_string(),
+                    format!("Large file write test failed: {}", e),
+                    None,
+                    Some("May indicate bandwidth or timeout issues".to_string()),
+                ));
+            }
+            Err(_) => {
+                details.push(CheckDetail::warning(
+                    "S3 Large File Write Performance".to_string(),
+                    "Large file write test timed out (>30s)".to_string(),
+                    None,
+                    Some("S3 write performance for large files may be slow".to_string()),
+                ));
+            }
+        }
+
+        // Test concurrent operations
+        self.test_s3_concurrent_performance(op, details).await;
+    }
+
+    /// Test S3 concurrent operation performance
+    async fn test_s3_concurrent_performance(&self, op: &opendal::Operator, details: &mut Vec<CheckDetail>) {
+        use std::time::Instant;
+        use tokio::time::{timeout, Duration};
+
+        let concurrent_count = 5;
+        let data = vec![0u8; 512]; // 512 bytes per operation
+
+        let start = Instant::now();
+        let mut handles = Vec::new();
+
+        for i in 0..concurrent_count {
+            let op_clone = op.clone();
+            let data_clone = data.clone();
+            let key = format!("stepstone_concurrent_test_{}", i);
+            let key_clone = key.clone();
+
+            let handle = tokio::spawn(async move {
+                op_clone.write(&key_clone, data_clone).await
+            });
+            handles.push((handle, key));
+        }
+
+        let mut successful_ops = 0;
+        let mut keys_to_cleanup = Vec::new();
+
+        for (handle, key) in handles {
+            match timeout(Duration::from_secs(10), handle).await {
+                Ok(Ok(Ok(_))) => {
+                    successful_ops += 1;
+                    keys_to_cleanup.push(key);
+                }
+                _ => {} // Failed or timed out
+            }
+        }
+
+        let total_duration = start.elapsed();
+        let ops_per_second = successful_ops as f64 / total_duration.as_secs_f64();
+
+        if successful_ops == concurrent_count {
+            details.push(CheckDetail::pass(
+                "S3 Concurrent Operations".to_string(),
+                format!("{} concurrent writes: {:.2}ms ({:.1} ops/s)",
+                       concurrent_count, total_duration.as_millis(), ops_per_second),
+                Some(total_duration),
+            ));
+        } else {
+            details.push(CheckDetail::warning(
+                "S3 Concurrent Operations".to_string(),
+                format!("{}/{} concurrent writes succeeded: {:.2}ms",
+                       successful_ops, concurrent_count, total_duration.as_millis()),
+                Some(total_duration),
+                Some("Some concurrent operations failed or timed out".to_string()),
+            ));
+        }
+
+        // Cleanup
+        for key in keys_to_cleanup {
+            let _ = op.delete(&key).await;
+        }
     }
 }
