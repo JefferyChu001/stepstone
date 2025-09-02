@@ -123,4 +123,245 @@ pub enum Error {
         #[snafu(implicit)]
         location: Location,
     },
+
+    // Address parsing errors
+    #[snafu(display("Invalid address format: {}", address))]
+    InvalidAddress {
+        address: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("Address must contain port number: {}", address))]
+    MissingPort {
+        address: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("Invalid port number in address {}: {}", address, port_str))]
+    InvalidPort {
+        address: String,
+        port_str: String,
+        #[snafu(source)]
+        error: std::num::ParseIntError,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    // Storage-specific errors
+    #[snafu(display("S3 configuration error: {}", message))]
+    S3Config {
+        message: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("S3 operation failed: {}", message))]
+    S3Operation {
+        message: String,
+        #[snafu(source)]
+        error: opendal::Error,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("OSS configuration error: {}", message))]
+    OssConfig {
+        message: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("OSS operation failed: {}", message))]
+    OssOperation {
+        message: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("Azure Blob configuration error: {}", message))]
+    AzureBlobConfig {
+        message: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("Azure Blob operation failed: {}", message))]
+    AzureBlobOperation {
+        message: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("Google Cloud Storage configuration error: {}", message))]
+    GcsConfig {
+        message: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("Google Cloud Storage operation failed: {}", message))]
+    GcsOperation {
+        message: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("File storage configuration error: {}", message))]
+    FileStorageConfig {
+        message: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("File storage operation failed: {}", message))]
+    FileStorageOperation {
+        message: String,
+        #[snafu(source)]
+        error: std::io::Error,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    // Metasrv-specific errors
+    #[snafu(display("PostgreSQL connection failed: {}", message))]
+    PostgresConnection {
+        message: String,
+        #[snafu(source)]
+        error: sqlx::Error,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("PostgreSQL query failed: {}", message))]
+    PostgresQuery {
+        message: String,
+        #[snafu(source)]
+        error: sqlx::Error,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("MySQL connection failed: {}", message))]
+    MySqlConnection {
+        message: String,
+        #[snafu(source)]
+        error: sqlx::Error,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("MySQL query failed: {}", message))]
+    MySqlQuery {
+        message: String,
+        #[snafu(source)]
+        error: sqlx::Error,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    // TCP connection errors
+    #[snafu(display("TCP connection failed to {}: {}", address, message))]
+    TcpConnection {
+        address: String,
+        message: String,
+        #[snafu(source)]
+        error: std::io::Error,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    // JSON serialization errors
+    #[snafu(display("JSON serialization failed: {}", message))]
+    JsonSerialization {
+        message: String,
+        #[snafu(source)]
+        error: serde_json::Error,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    // TOML parsing errors
+    #[snafu(display("TOML parsing failed: {}", message))]
+    TomlParsing {
+        message: String,
+        #[snafu(source)]
+        error: toml::de::Error,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    // Performance test errors
+    #[snafu(display("Performance test setup failed: {}", message))]
+    PerformanceTestSetup {
+        message: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("Performance test execution failed: {}", message))]
+    PerformanceTestExecution {
+        message: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    // Unsupported operations
+    #[snafu(display("Unsupported storage type: {}", storage_type))]
+    UnsupportedStorageType {
+        storage_type: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+
+    #[snafu(display("Unsupported store type: {}", store_type))]
+    UnsupportedStoreType {
+        store_type: String,
+        #[snafu(implicit)]
+        location: Location,
+    },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use snafu::ResultExt;
+
+    #[test]
+    fn test_missing_port_error() {
+        // Test missing port error
+        let missing_port_error = MissingPortSnafu {
+            address: "localhost".to_string(),
+        }.build();
+
+        assert!(missing_port_error.to_string().contains("Address must contain port number"));
+        assert!(missing_port_error.to_string().contains("localhost"));
+    }
+
+    #[test]
+    fn test_config_load_error() {
+        let config_error = ConfigLoadSnafu {
+            message: "Failed to parse TOML".to_string(),
+        }.build();
+
+        assert!(config_error.to_string().contains("Failed to load configuration"));
+        assert!(config_error.to_string().contains("Failed to parse TOML"));
+    }
+
+    #[test]
+    fn test_error_context() {
+        // Test that we can use context with our error types
+        let result: std::result::Result<(), std::io::Error> = Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "file not found"
+        ));
+
+        let error = result.context(FileSystemSnafu {
+            message: "Failed to read config file".to_string(),
+        }).unwrap_err();
+
+        assert!(error.to_string().contains("File system operation failed"));
+        assert!(error.to_string().contains("Failed to read config file"));
+    }
 }

@@ -12,9 +12,11 @@
 
 use crate::common::{CheckDetail, CheckResult, ComponentChecker};
 use crate::config::DatanodeConfig;
+use crate::error;
 use async_trait::async_trait;
 use opendal::services::S3;
 use opendal::Operator;
+use snafu::ResultExt;
 use std::fmt::{Debug, Formatter};
 use std::time::{Duration, Instant};
 use tokio::net::TcpStream;
@@ -500,7 +502,7 @@ impl DatanodeChecker {
     }
 
     /// Parse address string into host and port (reuse from frontend)
-    fn parse_address(&self, addr: &str) -> Result<(String, u16), String> {
+    fn parse_address(&self, addr: &str) -> error::Result<(String, u16)> {
         // Handle different address formats
         if addr.starts_with("http://") {
             let addr = addr.strip_prefix("http://").unwrap();
@@ -514,7 +516,7 @@ impl DatanodeChecker {
     }
 
     /// Parse host:port format
-    fn parse_host_port(&self, addr: &str) -> Result<(String, u16), String> {
+    fn parse_host_port(&self, addr: &str) -> error::Result<(String, u16)> {
         if let Some(colon_pos) = addr.rfind(':') {
             let host = addr[..colon_pos].to_string();
             let port_str = &addr[colon_pos + 1..];
@@ -526,12 +528,16 @@ impl DatanodeChecker {
                 port_str
             };
 
-            match port_str.parse::<u16>() {
-                Ok(port) => Ok((host, port)),
-                Err(_) => Err(format!("Invalid port number: {}", port_str)),
-            }
+            port_str.parse::<u16>()
+                .map(|port| (host, port))
+                .context(error::InvalidPortSnafu {
+                    address: addr.to_string(),
+                    port_str: port_str.to_string(),
+                })
         } else {
-            Err("Address must contain port number (host:port)".to_string())
+            error::MissingPortSnafu {
+                address: addr.to_string(),
+            }.fail()
         }
     }
 }

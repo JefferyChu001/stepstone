@@ -18,6 +18,9 @@ mod frontend;
 #[allow(dead_code)]
 mod metasrv;
 
+#[cfg(test)]
+mod tests;
+
 use clap::{Parser, Subcommand};
 use common::{ComponentChecker, CheckResult};
 use config::ConfigParser;
@@ -132,11 +135,13 @@ async fn run_metasrv_check(config_path: &str, _verbose: bool, output_format: &st
 }
 
 fn output_result(result: &CheckResult, component_name: &str, config_file: Option<&str>, output_format: &str) -> error::Result<()> {
+    use snafu::ResultExt;
+
     match output_format {
         "json" => {
             let json_output = result.to_json(component_name, config_file)
-                .map_err(|e| error::Error::ConfigLoad {
-                    message: format!("Failed to serialize result to JSON: {}", e),
+                .context(error::JsonSerializationSnafu {
+                    message: "Failed to serialize result to JSON".to_string(),
                 })?;
             println!("{}", json_output);
         }

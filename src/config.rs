@@ -11,6 +11,7 @@
 // limitations under the License.
 
 use serde::{Deserialize, Serialize};
+use snafu::ResultExt;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -161,34 +162,34 @@ pub struct ConfigParser;
 impl ConfigParser {
     /// Parse Metasrv configuration from TOML file
     pub fn parse_metasrv_config<P: AsRef<Path>>(path: P) -> crate::error::Result<MetasrvConfig> {
-        let content = fs::read_to_string(&path).map_err(|e| crate::error::Error::ConfigLoad {
-            message: format!("Failed to read config file: {:?}: {}", path.as_ref(), e),
+        let content = fs::read_to_string(&path).context(crate::error::FileSystemSnafu {
+            message: format!("Failed to read config file: {:?}", path.as_ref()),
         })?;
 
-        toml::from_str(&content).map_err(|e| crate::error::Error::ConfigLoad {
-            message: format!("Failed to parse TOML config: {}", e),
+        toml::from_str(&content).context(crate::error::TomlParsingSnafu {
+            message: "Failed to parse metasrv TOML config".to_string(),
         })
     }
 
     /// Parse Frontend configuration from TOML file
     pub fn parse_frontend_config<P: AsRef<Path>>(path: P) -> crate::error::Result<FrontendConfig> {
-        let content = fs::read_to_string(&path).map_err(|e| crate::error::Error::ConfigLoad {
-            message: format!("Failed to read config file: {:?}: {}", path.as_ref(), e),
+        let content = fs::read_to_string(&path).context(crate::error::FileSystemSnafu {
+            message: format!("Failed to read config file: {:?}", path.as_ref()),
         })?;
 
-        toml::from_str(&content).map_err(|e| crate::error::Error::ConfigLoad {
-            message: format!("Failed to parse TOML config: {}", e),
+        toml::from_str(&content).context(crate::error::TomlParsingSnafu {
+            message: "Failed to parse frontend TOML config".to_string(),
         })
     }
 
     /// Parse Datanode configuration from TOML file
     pub fn parse_datanode_config<P: AsRef<Path>>(path: P) -> crate::error::Result<DatanodeConfig> {
-        let content = fs::read_to_string(&path).map_err(|e| crate::error::Error::ConfigLoad {
-            message: format!("Failed to read config file: {:?}: {}", path.as_ref(), e),
+        let content = fs::read_to_string(&path).context(crate::error::FileSystemSnafu {
+            message: format!("Failed to read config file: {:?}", path.as_ref()),
         })?;
 
-        toml::from_str(&content).map_err(|e| crate::error::Error::ConfigLoad {
-            message: format!("Failed to parse TOML config: {}", e),
+        toml::from_str(&content).context(crate::error::TomlParsingSnafu {
+            message: "Failed to parse datanode TOML config".to_string(),
         })
     }
 }
