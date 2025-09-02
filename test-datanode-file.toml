@@ -1,0 +1,31 @@
+# Test configuration for Datanode with file storage (GreptimeDB format)
+node_id = 1
+require_lease_before_startup = false
+init_regions_in_background = false
+
+# HTTP server configuration
+[http]
+addr = "127.0.0.1:4000"
+timeout = "30s"
+
+# gRPC server configuration
+[grpc]
+addr = "127.0.0.1:4001"
+runtime_size = 8
+
+# Heartbeat configuration
+[heartbeat]
+interval = "18s"
+retry_interval = "3s"
+
+# Metasrv client configuration
+[meta_client]
+metasrv_addrs = ["127.0.0.1:3002"]
+timeout = "3s"
+heartbeat_timeout = "500ms"
+ddl_timeout = "10s"
+
+# Storage configuration - File storage
+[storage]
+data_home = "./test_data/datanode"
+type = "File"

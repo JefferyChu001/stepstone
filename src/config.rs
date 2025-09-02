@@ -16,33 +16,89 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-/// Configuration for Metasrv component
+/// Configuration for Metasrv component (matches actual GreptimeDB format)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetasrvConfig {
-    /// Backend store configuration
-    pub store: StoreConfig,
-    /// Server configuration
-    pub server: Option<ServerConfig>,
+    /// Data home directory
+    pub data_home: Option<String>,
+    /// Store addresses
+    pub store_addrs: Vec<String>,
+    /// Store key prefix
+    pub store_key_prefix: Option<String>,
+    /// Backend type
+    pub backend: String,
+    /// Meta table name (for RDS backends)
+    pub meta_table_name: Option<String>,
+    /// Meta schema name (for PostgreSQL)
+    pub meta_schema_name: Option<String>,
+    /// Advisory lock id for PostgreSQL
+    pub meta_election_lock_id: Option<i32>,
+    /// Datanode selector type
+    pub selector: Option<String>,
+    /// Use memory store
+    pub use_memory_store: Option<bool>,
+    /// Enable region failover
+    pub enable_region_failover: Option<bool>,
+    /// gRPC server configuration
+    pub grpc: Option<GrpcConfig>,
+    /// HTTP server configuration
+    pub http: Option<HttpConfig>,
+    /// Backend TLS configuration
+    pub backend_tls: Option<TlsConfig>,
 }
 
-/// Configuration for Frontend component
+/// Configuration for Frontend component (matches actual GreptimeDB format)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FrontendConfig {
-    /// Metasrv addresses
-    pub metasrv_addrs: Vec<String>,
-    /// Server configuration
-    pub server: Option<ServerConfig>,
+    /// Data home directory
+    pub data_home: Option<String>,
+    /// Default timezone
+    pub default_timezone: Option<String>,
+    /// HTTP server configuration
+    pub http: Option<HttpConfig>,
+    /// gRPC server configuration
+    pub grpc: Option<GrpcConfig>,
+    /// Metasrv client configuration
+    pub meta_client: Option<MetaClientConfig>,
+    /// Heartbeat configuration
+    pub heartbeat: Option<HeartbeatConfig>,
+    /// Prometheus configuration
+    pub prometheus: Option<PrometheusConfig>,
+    /// Logging configuration
+    pub logging: Option<LoggingConfig>,
 }
 
-/// Configuration for Datanode component
+/// Configuration for Datanode component (matches actual GreptimeDB format)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatanodeConfig {
-    /// Metasrv addresses
-    pub metasrv_addrs: Vec<String>,
+    /// Datanode identifier
+    pub node_id: Option<u64>,
+    /// Start services after regions have obtained leases
+    pub require_lease_before_startup: Option<bool>,
+    /// Initialize all regions in the background during startup
+    pub init_regions_in_background: Option<bool>,
+    /// Parallelism of initializing regions
+    pub init_regions_parallelism: Option<u32>,
+    /// Maximum concurrent queries allowed
+    pub max_concurrent_queries: Option<u32>,
+    /// Enable telemetry
+    pub enable_telemetry: Option<bool>,
+    /// HTTP server configuration
+    pub http: Option<HttpConfig>,
+    /// gRPC server configuration
+    pub grpc: Option<GrpcConfig>,
+    /// Heartbeat configuration
+    pub heartbeat: Option<HeartbeatConfig>,
+    /// Metasrv client configuration
+    pub meta_client: Option<MetaClientConfig>,
+    /// WAL configuration
+    pub wal: Option<WalConfig>,
     /// Storage configuration
-    pub storage: StorageConfig,
-    /// Server configuration
-    pub server: Option<ServerConfig>,
+    pub storage: Option<DatanodeStorageConfig>,
+    /// Query configuration
+    pub query: Option<QueryConfig>,
+    /// Logging configuration
+    pub logging: Option<LoggingConfig>,
 }
 
 /// Store configuration for Metasrv
@@ -71,6 +127,132 @@ pub struct ServerConfig {
     pub http_addr: Option<String>,
     /// gRPC address
     pub grpc_addr: Option<String>,
+}
+
+/// gRPC server configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GrpcConfig {
+    /// Bind address
+    pub addr: Option<String>,
+    /// Server address
+    pub server_addr: Option<String>,
+    /// Runtime size
+    pub runtime_size: Option<u32>,
+    /// Max receive message size
+    pub max_recv_message_size: Option<String>,
+    /// Max send message size
+    pub max_send_message_size: Option<String>,
+}
+
+/// HTTP server configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HttpConfig {
+    /// HTTP address
+    pub addr: Option<String>,
+    /// Request timeout
+    pub timeout: Option<String>,
+    /// Body limit
+    pub body_limit: Option<String>,
+    /// Max connections
+    pub max_connections: Option<u32>,
+}
+
+/// Metasrv client configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MetaClientConfig {
+    /// Metasrv addresses
+    pub metasrv_addrs: Vec<String>,
+    /// Operation timeout
+    pub timeout: Option<String>,
+    /// Heartbeat timeout
+    pub heartbeat_timeout: Option<String>,
+    /// DDL timeout
+    pub ddl_timeout: Option<String>,
+    /// Connect timeout
+    pub connect_timeout: Option<String>,
+    /// TCP nodelay
+    pub tcp_nodelay: Option<bool>,
+}
+
+/// Heartbeat configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeartbeatConfig {
+    /// Heartbeat interval
+    pub interval: Option<String>,
+    /// Retry interval
+    pub retry_interval: Option<String>,
+}
+
+/// Prometheus configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrometheusConfig {
+    /// Enable prometheus
+    pub enable: Option<bool>,
+    /// With metric engine
+    pub with_metric_engine: Option<bool>,
+}
+
+/// Logging configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LoggingConfig {
+    /// Log level
+    pub level: Option<String>,
+    /// Log directory
+    pub dir: Option<String>,
+}
+
+/// WAL configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WalConfig {
+    /// WAL provider
+    pub provider: Option<String>,
+    /// WAL directory
+    pub dir: Option<String>,
+    /// File size
+    pub file_size: Option<String>,
+    /// Purge threshold
+    pub purge_threshold: Option<String>,
+    /// Purge interval
+    pub purge_interval: Option<String>,
+    /// Read batch size
+    pub read_batch_size: Option<u32>,
+    /// Sync write
+    pub sync_write: Option<bool>,
+}
+
+/// Datanode storage configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatanodeStorageConfig {
+    /// Data home directory
+    pub data_home: Option<String>,
+    /// Storage type
+    #[serde(rename = "type")]
+    pub storage_type: Option<String>,
+    /// Cache capacity
+    pub cache_capacity: Option<String>,
+    /// Cache path
+    pub cache_path: Option<String>,
+    /// S3 bucket
+    pub bucket: Option<String>,
+    /// S3 root
+    pub root: Option<String>,
+    /// Access key ID
+    pub access_key_id: Option<String>,
+    /// Secret access key
+    pub secret_access_key: Option<String>,
+    /// Endpoint
+    pub endpoint: Option<String>,
+    /// Region
+    pub region: Option<String>,
+}
+
+/// Query configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueryConfig {
+    /// Query parallelism
+    pub parallelism: Option<u32>,
+    /// Allow query fallback
+    pub allow_query_fallback: Option<bool>,
 }
 
 /// Storage configuration for Datanode
@@ -271,38 +453,92 @@ impl ConfigParser {
     /// Create a default metasrv config for testing
     pub fn default_metasrv_config() -> MetasrvConfig {
         MetasrvConfig {
-            store: StoreConfig {
-                store_type: "memory_store".to_string(),
-                store_addrs: vec![],
-                store_key_prefix: Some("/greptime".to_string()),
-                max_txn_ops: Some(128),
-                meta_table_name: Some("greptime_metasrv".to_string()),
-                tls: None,
-            },
-            server: None,
+            data_home: Some("./greptimedb_data".to_string()),
+            store_addrs: vec!["127.0.0.1:2379".to_string()],
+            store_key_prefix: Some("/greptime".to_string()),
+            backend: "memory_store".to_string(),
+            meta_table_name: Some("greptime_metasrv".to_string()),
+            meta_schema_name: None,
+            meta_election_lock_id: None,
+            selector: None,
+            use_memory_store: Some(true),
+            enable_region_failover: None,
+            grpc: None,
+            http: None,
+            backend_tls: None,
         }
     }
 
     /// Create a default frontend config for testing
     pub fn default_frontend_config() -> FrontendConfig {
         FrontendConfig {
-            metasrv_addrs: vec!["127.0.0.1:3002".to_string()],
-            server: None,
+            data_home: Some("./greptimedb_data".to_string()),
+            default_timezone: Some("UTC".to_string()),
+            http: None,
+            grpc: None,
+            meta_client: Some(MetaClientConfig {
+                metasrv_addrs: vec!["127.0.0.1:3002".to_string()],
+                timeout: Some("3s".to_string()),
+                heartbeat_timeout: Some("500ms".to_string()),
+                ddl_timeout: Some("10s".to_string()),
+                connect_timeout: Some("1s".to_string()),
+                tcp_nodelay: Some(true),
+            }),
+            heartbeat: None,
+            prometheus: None,
+            logging: None,
         }
     }
 
     /// Create a default datanode config for testing
     pub fn default_datanode_config() -> DatanodeConfig {
-        let mut storage_config = HashMap::new();
-        storage_config.insert("root".to_string(), toml::Value::String("./data".to_string()));
-
         DatanodeConfig {
-            metasrv_addrs: vec!["127.0.0.1:3002".to_string()],
-            storage: StorageConfig {
-                storage_type: "File".to_string(),
-                config: storage_config,
-            },
-            server: None,
+            node_id: Some(1),
+            require_lease_before_startup: Some(false),
+            init_regions_in_background: Some(false),
+            init_regions_parallelism: Some(16),
+            max_concurrent_queries: Some(0),
+            enable_telemetry: Some(true),
+            http: Some(HttpConfig {
+                addr: Some("127.0.0.1:4000".to_string()),
+                timeout: Some("30s".to_string()),
+                body_limit: None,
+                max_connections: None,
+            }),
+            grpc: Some(GrpcConfig {
+                addr: Some("127.0.0.1:4001".to_string()),
+                server_addr: None,
+                runtime_size: Some(8),
+                max_recv_message_size: None,
+                max_send_message_size: None,
+            }),
+            heartbeat: Some(HeartbeatConfig {
+                interval: Some("18s".to_string()),
+                retry_interval: Some("3s".to_string()),
+            }),
+            meta_client: Some(MetaClientConfig {
+                metasrv_addrs: vec!["127.0.0.1:3002".to_string()],
+                timeout: Some("3s".to_string()),
+                heartbeat_timeout: Some("500ms".to_string()),
+                ddl_timeout: Some("10s".to_string()),
+                connect_timeout: Some("1s".to_string()),
+                tcp_nodelay: Some(true),
+            }),
+            wal: None,
+            storage: Some(DatanodeStorageConfig {
+                data_home: Some("./greptimedb_data".to_string()),
+                storage_type: Some("File".to_string()),
+                cache_capacity: None,
+                cache_path: None,
+                bucket: None,
+                root: None,
+                access_key_id: None,
+                secret_access_key: None,
+                endpoint: None,
+                region: None,
+            }),
+            query: None,
+            logging: None,
         }
     }
 }
@@ -316,13 +552,17 @@ mod tests {
     #[test]
     fn test_default_configs() {
         let metasrv_config = ConfigParser::default_metasrv_config();
-        assert_eq!(metasrv_config.store.store_type, "memory_store");
+        assert_eq!(metasrv_config.backend, "memory_store");
 
         let frontend_config = ConfigParser::default_frontend_config();
-        assert_eq!(frontend_config.metasrv_addrs, vec!["127.0.0.1:3002"]);
+        assert!(frontend_config.meta_client.is_some());
+        assert_eq!(frontend_config.meta_client.unwrap().metasrv_addrs, vec!["127.0.0.1:3002"]);
 
         let datanode_config = ConfigParser::default_datanode_config();
-        assert_eq!(datanode_config.storage.storage_type, "File");
+        assert!(datanode_config.meta_client.is_some());
+        assert_eq!(datanode_config.meta_client.unwrap().metasrv_addrs, vec!["127.0.0.1:3002"]);
+        assert!(datanode_config.storage.is_some());
+        assert_eq!(datanode_config.storage.unwrap().storage_type, Some("File".to_string()));
     }
 
     #[test]
@@ -362,10 +602,9 @@ addr = "0.0.0.0:3002"
         temp_file.write_all(toml_content.as_bytes()).unwrap();
 
         let config = ConfigParser::parse_metasrv_config(temp_file.path()).unwrap();
-        assert_eq!(config.store.store_type, "etcd_store");
-        assert_eq!(config.store.store_addrs, vec!["127.0.0.1:2379"]);
-        assert_eq!(config.store.store_key_prefix, Some("/greptime".to_string()));
-        assert_eq!(config.store.max_txn_ops, Some(128));
+        assert_eq!(config.backend, "etcd_store");
+        assert_eq!(config.store_addrs, vec!["127.0.0.1:2379"]);
+        assert_eq!(config.store_key_prefix, Some("/greptime".to_string()));
     }
 
     #[test]

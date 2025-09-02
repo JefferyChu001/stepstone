@@ -41,17 +41,29 @@ impl FrontendChecker {
     async fn check_metasrv_connectivity(&self) -> CheckResult {
         let mut details = Vec::new();
 
-        if self.config.metasrv_addrs.is_empty() {
+        let metasrv_addrs = if let Some(meta_client) = &self.config.meta_client {
+            &meta_client.metasrv_addrs
+        } else {
+            details.push(CheckDetail::fail(
+                "Metasrv Configuration".to_string(),
+                "No meta_client configuration found".to_string(),
+                None,
+                Some("Configure meta_client section in the configuration file".to_string()),
+            ));
+            return CheckResult::from_details(details);
+        };
+
+        if metasrv_addrs.is_empty() {
             details.push(CheckDetail::fail(
                 "Metasrv Configuration".to_string(),
                 "No metasrv addresses configured".to_string(),
                 None,
-                Some("Add metasrv addresses to metasrv_addrs configuration".to_string()),
+                Some("Configure metasrv_addrs in the meta_client section".to_string()),
             ));
             return CheckResult::from_details(details);
         }
 
-        for (index, addr) in self.config.metasrv_addrs.iter().enumerate() {
+        for (index, addr) in metasrv_addrs.iter().enumerate() {
             let start = Instant::now();
 
             // Parse address to extract host and port
@@ -143,73 +155,58 @@ impl FrontendChecker {
     async fn check_server_config(&self) -> CheckResult {
         let mut details = Vec::new();
 
-        if let Some(server_config) = &self.config.server {
-            // Check if configured addresses are valid
-            if let Some(addr) = &server_config.addr {
+        // Check HTTP server configuration
+        if let Some(http_config) = &self.config.http {
+            if let Some(addr) = &http_config.addr {
                 match self.parse_address(addr) {
                     Ok(_) => {
                         details.push(CheckDetail::pass(
-                            "Server Address Configuration".to_string(),
-                            format!("Server address '{}' is valid", addr),
+                            "HTTP Server Address Configuration".to_string(),
+                            format!("HTTP server address '{}' is valid", addr),
                             None,
                         ));
                     }
                     Err(e) => {
                         details.push(CheckDetail::fail(
-                            "Server Address Configuration".to_string(),
-                            format!("Invalid server address '{}': {}", addr, e),
+                            "HTTP Server Address Configuration".to_string(),
+                            format!("Invalid HTTP server address '{}': {}", addr, e),
                             None,
-                            Some("Check server address format".to_string()),
+                            Some("Check HTTP server address format (host:port)".to_string()),
                         ));
                     }
                 }
             }
+        }
 
-            if let Some(http_addr) = &server_config.http_addr {
-                match self.parse_address(http_addr) {
+        // Check gRPC server configuration
+        if let Some(grpc_config) = &self.config.grpc {
+            if let Some(addr) = &grpc_config.addr {
+                match self.parse_address(addr) {
                     Ok(_) => {
                         details.push(CheckDetail::pass(
-                            "HTTP Address Configuration".to_string(),
-                            format!("HTTP address '{}' is valid", http_addr),
+                            "gRPC Server Address Configuration".to_string(),
+                            format!("gRPC server address '{}' is valid", addr),
                             None,
                         ));
                     }
                     Err(e) => {
                         details.push(CheckDetail::fail(
-                            "HTTP Address Configuration".to_string(),
-                            format!("Invalid HTTP address '{}': {}", http_addr, e),
+                            "gRPC Server Address Configuration".to_string(),
+                            format!("Invalid gRPC server address '{}': {}", addr, e),
                             None,
-                            Some("Check HTTP address format".to_string()),
+                            Some("Check gRPC server address format (host:port)".to_string()),
                         ));
                     }
                 }
             }
+        }
 
-            if let Some(grpc_addr) = &server_config.grpc_addr {
-                match self.parse_address(grpc_addr) {
-                    Ok(_) => {
-                        details.push(CheckDetail::pass(
-                            "gRPC Address Configuration".to_string(),
-                            format!("gRPC address '{}' is valid", grpc_addr),
-                            None,
-                        ));
-                    }
-                    Err(e) => {
-                        details.push(CheckDetail::fail(
-                            "gRPC Address Configuration".to_string(),
-                            format!("Invalid gRPC address '{}': {}", grpc_addr, e),
-                            None,
-                            Some("Check gRPC address format".to_string()),
-                        ));
-                    }
-                }
-            }
-        } else {
+        if details.is_empty() {
             details.push(CheckDetail::warning(
                 "Server Configuration".to_string(),
-                "No server configuration found, using defaults".to_string(),
+                "No HTTP or gRPC server configuration found".to_string(),
                 None,
-                Some("Consider adding server configuration for production use".to_string()),
+                Some("Consider configuring http and grpc sections for server endpoints".to_string()),
             ));
         }
 

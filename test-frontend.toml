@@ -1,0 +1,27 @@
+# Test configuration for Frontend (GreptimeDB format)
+default_timezone = "UTC"
+
+# HTTP server configuration
+[http]
+addr = "127.0.0.1:4000"
+timeout = "30s"
+body_limit = "64MB"
+
+# gRPC server configuration
+[grpc]
+addr = "127.0.0.1:4001"
+runtime_size = 8
+
+# Metasrv client configuration
+[meta_client]
+metasrv_addrs = ["127.0.0.1:3002"]
+timeout = "3s"
+heartbeat_timeout = "500ms"
+ddl_timeout = "10s"
+connect_timeout = "1s"
+tcp_nodelay = true
+
+# Heartbeat configuration
+[heartbeat]
+interval = "18s"
+retry_interval = "3s"

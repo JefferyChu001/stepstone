@@ -45,17 +45,29 @@ impl DatanodeChecker {
     async fn check_metasrv_connectivity(&self) -> CheckResult {
         let mut details = Vec::new();
 
-        if self.config.metasrv_addrs.is_empty() {
+        let metasrv_addrs = if let Some(meta_client) = &self.config.meta_client {
+            &meta_client.metasrv_addrs
+        } else {
+            details.push(CheckDetail::fail(
+                "Metasrv Configuration".to_string(),
+                "No meta_client configuration found".to_string(),
+                None,
+                Some("Configure meta_client section in the configuration file".to_string()),
+            ));
+            return CheckResult::from_details(details);
+        };
+
+        if metasrv_addrs.is_empty() {
             details.push(CheckDetail::fail(
                 "Metasrv Configuration".to_string(),
                 "No metasrv addresses configured".to_string(),
                 None,
-                Some("Add metasrv addresses to metasrv_addrs configuration".to_string()),
+                Some("Configure metasrv_addrs in the meta_client section".to_string()),
             ));
             return CheckResult::from_details(details);
         }
 
-        for (index, addr) in self.config.metasrv_addrs.iter().enumerate() {
+        for (index, addr) in metasrv_addrs.iter().enumerate() {
             let start = Instant::now();
 
             // Parse address to extract host and port
@@ -105,7 +117,23 @@ impl DatanodeChecker {
 
     /// Check object storage configuration and connectivity
     async fn check_object_storage(&self) -> CheckResult {
-        match self.config.storage.storage_type.as_str() {
+        let storage_config = match &self.config.storage {
+            Some(config) => config,
+            None => {
+                return CheckResult::failure(
+                    "No storage configuration found".to_string(),
+                    vec![CheckDetail::fail(
+                        "Storage Configuration".to_string(),
+                        "Storage configuration is missing".to_string(),
+                        None,
+                        Some("Add storage configuration section".to_string()),
+                    )],
+                );
+            }
+        };
+
+        let storage_type = storage_config.storage_type.as_deref().unwrap_or("File");
+        match storage_type {
             "S3" => self.check_s3_storage().await,
             "Oss" => self.check_oss_storage().await,
             "Azblob" => self.check_azblob_storage().await,
@@ -128,33 +156,35 @@ impl DatanodeChecker {
         let mut details = Vec::new();
         let start = Instant::now();
 
-        // Parse S3 configuration
-        let s3_config = match self.config.storage.as_s3_config() {
-            Ok(config) => config,
-            Err(e) => {
+        // Get S3 configuration from storage config
+        let storage_config = self.config.storage.as_ref().unwrap();
+
+        let bucket = match &storage_config.bucket {
+            Some(bucket) => bucket,
+            None => {
                 details.push(CheckDetail::fail(
                     "S3 Configuration".to_string(),
-                    format!("Failed to parse S3 configuration: {}", e),
+                    "S3 bucket name is required".to_string(),
                     None,
-                    Some("Check S3 configuration parameters".to_string()),
+                    Some("Set bucket name in storage configuration".to_string()),
                 ));
                 return CheckResult::from_details(details);
             }
         };
 
-        // Build S3 operator
-        let mut builder = S3::default()
-            .root(s3_config.root.as_deref().unwrap_or(""))
-            .bucket(&s3_config.bucket)
-            .access_key_id(&s3_config.access_key_id)
-            .secret_access_key(&s3_config.secret_access_key);
+        let access_key_id = storage_config.access_key_id.as_deref().unwrap_or("");
+        let secret_access_key = storage_config.secret_access_key.as_deref().unwrap_or("");
+        let endpoint = storage_config.endpoint.as_deref().unwrap_or("https://s3.amazonaws.com");
+        let region = storage_config.region.as_deref().unwrap_or("us-east-1");
 
-        if let Some(endpoint) = &s3_config.endpoint {
-            builder = builder.endpoint(endpoint);
-        }
-        if let Some(region) = &s3_config.region {
-            builder = builder.region(region);
-        }
+        // Build S3 operator
+        let builder = S3::default()
+            .root(storage_config.root.as_deref().unwrap_or(""))
+            .bucket(bucket)
+            .access_key_id(access_key_id)
+            .secret_access_key(secret_access_key)
+            .endpoint(endpoint)
+            .region(region);
 
         match Operator::new(builder) {
             Ok(op) => {
@@ -301,9 +331,8 @@ impl DatanodeChecker {
         let mut details = Vec::new();
 
         // For file storage, we mainly check if the directory exists and is writable
-        let root_path = self.config.storage.config.get("root")
-            .and_then(|v| v.as_str())
-            .unwrap_or("./data");
+        let storage_config = self.config.storage.as_ref().unwrap();
+        let root_path = storage_config.data_home.as_deref().unwrap_or("./greptimedb_data");
 
         match std::fs::metadata(root_path) {
             Ok(metadata) => {
