@@ -1,5 +1,5 @@
-# GreptimeDB Datanode Test Configuration with File Storage
-# This configuration tests file system storage with read/write permissions
+# GreptimeDB Datanode Test Configuration
+# This configuration is designed for testing datanode connectivity and functionality
 
 # Node configuration
 node_id = 0
@@ -49,10 +49,20 @@ purge_threshold = "1GB"
 [query]
 parallelism = 0
 
-# Storage configuration - File storage (tests directory permissions and write access)
+# Storage configuration - MinIO S3 storage (comprehensive performance testing)
 [storage]
 data_home = "./test_data/datanode"
-type = "File"
+type = "S3"
+bucket = "greptime-test-bucket"
+root = "test-data"
+access_key_id = "minioadmin"
+secret_access_key = "minioadmin"
+endpoint = "http://localhost:9000"
+region = "us-east-1"
+
+# Local cache configuration for S3
+cache_path = "./test_data/datanode/cache"
+cache_capacity = "1GiB"
 
 # Region engine configuration
 [[region_engine]]

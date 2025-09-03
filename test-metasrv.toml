@@ -1,15 +1,19 @@
-# GreptimeDB Metasrv Test Configuration with PostgreSQL Backend
-# This configuration tests PostgreSQL connectivity, permissions, and read/write performance
+# GreptimeDB Metasrv Test Configuration
+# This configuration tests both etcd and PostgreSQL backends with comprehensive read/write testing
 
 # Working directory for metasrv data
 data_home = "./test_data/metasrv"
 
-# PostgreSQL as metadata store (tests PostgreSQL connectivity and CRUD operations)
-store_addrs = ["postgresql://greptime:greptime@localhost:5432/greptime_meta"]
+# etcd as metadata store (tests etcd connectivity and CRUD operations)
+store_addrs = ["127.0.0.1:2379"]
 store_key_prefix = ""
-backend = "postgres_store"
-meta_table_name = "greptime_metasrv"
-meta_schema_name = "public"
+backend = "etcd_store"
+
+# Alternative PostgreSQL configuration (uncomment to test PostgreSQL backend)
+# store_addrs = ["postgresql://greptime:greptime@localhost:5432/greptime_meta"]
+# backend = "postgres_store"
+# meta_table_name = "greptime_metasrv"
+# meta_schema_name = "public"
 
 # Basic metasrv settings
 selector = "round_robin"

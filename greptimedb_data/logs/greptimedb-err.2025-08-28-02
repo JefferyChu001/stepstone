@@ -1,3 +1,0 @@
-2025-08-28T02:38:25.109175Z ERROR meta_srv::election::etcd: Failed to keep alive err=0: Failed to execute via Etcd, at src/meta-srv/src/election/etcd.rs:293:35
-1: LeaseKeepAliveError("channel closed")
-2025-08-28T02:38:25.114978Z ERROR meta_srv::metasrv: Leader :LeaderKey(LeaderKey { name: [95, 95, 109, 101, 116, 97, 115, 114, 118, 95, 101, 108, 101, 99, 116, 105, 111, 110], key: [95, 95, 109, 101, 116, 97, 115, 114, 118, 95, 101, 108, 101, 99, 116, 105, 111, 110, 47, 54, 57, 52, 100, 57, 56, 101, 97, 102, 53, 99, 55, 98, 48, 48, 57], rev: 6, lease: 7587889082102427657 }) step down
