@@ -1,0 +1,86 @@
+# GreptimeDB Datanode Test Configuration with File Storage
+# This configuration tests file system storage with read/write permissions
+
+# Node configuration
+node_id = 0
+require_lease_before_startup = false
+init_regions_in_background = false
+enable_telemetry = true
+
+# HTTP server configuration
+[http]
+addr = "127.0.0.1:5000"
+timeout = "30s"
+body_limit = "64MB"
+
+# gRPC server configuration
+[grpc]
+bind_addr = "127.0.0.1:3001"
+server_addr = "127.0.0.1:3001"
+runtime_size = 8
+max_recv_message_size = "512MB"
+max_send_message_size = "512MB"
+
+[grpc.tls]
+mode = "disable"
+
+# Heartbeat configuration
+[heartbeat]
+interval = "3s"
+retry_interval = "3s"
+
+# Metasrv client configuration
+[meta_client]
+metasrv_addrs = ["127.0.0.1:3002"]
+timeout = "3s"
+heartbeat_timeout = "500ms"
+ddl_timeout = "10s"
+connect_timeout = "1s"
+tcp_nodelay = true
+
+# WAL configuration
+[wal]
+provider = "raft_engine"
+dir = "./test_data/datanode/wal"
+file_size = "128MB"
+purge_threshold = "1GB"
+
+# Query engine configuration
+[query]
+parallelism = 0
+
+# Storage configuration - File storage (tests directory permissions and write access)
+[storage]
+data_home = "./test_data/datanode"
+type = "File"
+
+# Region engine configuration
+[[region_engine]]
+[region_engine.mito]
+worker_channel_size = 128
+worker_request_batch_size = 64
+auto_flush_interval = "1h"
+sst_write_buffer_size = "8MB"
+
+# Index configuration
+[region_engine.mito.index]
+aux_path = "./test_data/datanode/index_intermediate"
+
+# Memtable configuration
+[region_engine.mito.memtable]
+type = "time_series"
+
+# Enable file engine
+[[region_engine]]
+[region_engine.file]
+
+# Enable metric engine
+[[region_engine]]
+[region_engine.metric]
+
+# Logging configuration
+[logging]
+dir = "./test_data/logs/datanode"
+level = "info"
+append_stdout = true
+log_format = "text"

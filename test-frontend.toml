@@ -1,0 +1,81 @@
+# GreptimeDB Frontend Test Configuration
+# This configuration is designed for testing frontend connectivity and functionality
+
+default_timezone = "UTC"
+
+# Heartbeat configuration
+[heartbeat]
+interval = "18s"
+retry_interval = "3s"
+
+# HTTP server configuration
+[http]
+addr = "127.0.0.1:4000"
+timeout = "30s"
+body_limit = "64MB"
+enable_cors = true
+cors_allowed_origins = ["*"]
+
+# gRPC server configuration
+[grpc]
+bind_addr = "127.0.0.1:4001"
+server_addr = "127.0.0.1:4001"
+runtime_size = 8
+flight_compression = "arrow_ipc"
+
+[grpc.tls]
+mode = "disable"
+
+# MySQL server configuration
+[mysql]
+enable = true
+addr = "127.0.0.1:4002"
+runtime_size = 2
+
+[mysql.tls]
+mode = "disable"
+
+# PostgreSQL server configuration
+[postgres]
+enable = true
+addr = "127.0.0.1:4003"
+runtime_size = 2
+
+[postgres.tls]
+mode = "disable"
+
+# Protocol support
+[opentsdb]
+enable = true
+
+[influxdb]
+enable = true
+
+[prom_store]
+enable = true
+
+# Metasrv client configuration
+[meta_client]
+metasrv_addrs = ["127.0.0.1:3002"]
+timeout = "3s"
+heartbeat_timeout = "500ms"
+ddl_timeout = "10s"
+connect_timeout = "1s"
+tcp_nodelay = true
+
+# Query engine configuration
+[query]
+parallelism = 0
+
+# Datanode client configuration
+[datanode]
+[datanode.client]
+connect_timeout = "10s"
+tcp_nodelay = true
+
+# Logging configuration
+[logging]
+dir = "./test_data/logs/frontend"
+level = "info"
+append_stdout = true
+log_format = "text"

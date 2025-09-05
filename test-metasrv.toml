@@ -1,0 +1,59 @@
+# GreptimeDB Metasrv Test Configuration
+# This configuration tests both etcd and PostgreSQL backends with comprehensive read/write testing
+
+# Working directory for metasrv data
+data_home = "./test_data/metasrv"
+
+# etcd as metadata store (tests etcd connectivity and CRUD operations)
+store_addrs = ["127.0.0.1:2379"]
+store_key_prefix = ""
+backend = "etcd_store"
+
+# Alternative PostgreSQL configuration (uncomment to test PostgreSQL backend)
+# store_addrs = ["postgresql://greptime:greptime@localhost:5432/greptime_meta"]
+# backend = "postgres_store"
+# meta_table_name = "greptime_metasrv"
+# meta_schema_name = "public"
+
+# Basic metasrv settings
+selector = "round_robin"
+use_memory_store = false
+enable_region_failover = false
+enable_telemetry = true
+
+# gRPC server configuration
+[grpc]
+bind_addr = "127.0.0.1:3002"
+server_addr = "127.0.0.1:3002"
+runtime_size = 8
+max_recv_message_size = "512MB"
+max_send_message_size = "512MB"
+
+# HTTP server configuration
+[http]
+addr = "127.0.0.1:3000"
+timeout = "30s"
+body_limit = "64MB"
+
+# Procedure configuration
+[procedure]
+max_retry_times = 12
+retry_delay = "500ms"
+
+# Datanode client configuration
+[datanode]
+[datanode.client]
+timeout = "10s"
+connect_timeout = "10s"
+tcp_nodelay = true
+
+# WAL configuration
+[wal]
+provider = "raft_engine"
+
+# Logging configuration
+[logging]
+dir = "./test_data/logs/metasrv"
+level = "info"
+append_stdout = true
+log_format = "text"
